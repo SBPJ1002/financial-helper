@@ -1,0 +1,24 @@
+databases:
+  - name: financial-helper-db
+    plan: free
+    databaseName: financial_helper
+    ipAllowList: []
+
+services:
+  - type: web
+    plan: free
+    name: financial-helper
+    runtime: node
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: financial-helper-db
+          property: connectionString
+      - key: CORS_ORIGIN
+        value: https://financial-helper.onrender.com

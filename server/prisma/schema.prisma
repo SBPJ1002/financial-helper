@@ -1,0 +1,483 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  fullName            String
+  password            String
+  role                Role                 @default(USER)
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  cpf                 String?
+  cpfHash             String?              @unique
+  birthDate           DateTime?
+  gender              Gender?
+  emailVerified       Boolean              @default(false)
+  lastLoginAt         DateTime?
+  zipCode             String?
+  street              String?
+  addressNumber       String?
+  complement          String?
+  neighborhood        String?
+  city                String?
+  state               String?
+  bankConnections     BankConnection[]
+  categories          Category[]
+  chatMessages        ChatMessage[]
+  expenses            Expense[]
+  incomes             Income[]
+  investmentSnapshots InvestmentSnapshot[]
+  investments         Investment[]
+  notifications       Notification[]
+  sessions            Session[]
+  simulationScenarios SimulationScenario[]
+  settings            UserSettings?
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Income {
+  id                String           @id @default(cuid())
+  userId            String
+  description       String
+  amount            Float
+  date              DateTime
+  recurrence        Recurrence       @default(MONTHLY)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  bankTransactionId String?          @unique
+  categoryId        String?
+  contractMonths    Int?
+  contractStartDate DateTime?
+  importBatchId     String?
+  recurrenceDay     Int?
+  currency          String           @default("BRL")
+  bankTransaction   BankTransaction? @relation(fields: [bankTransactionId], references: [id])
+  category          Category?        @relation(fields: [categoryId], references: [id])
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("incomes")
+}
+
+model Category {
+  id        String       @id @default(cuid())
+  userId    String?
+  name      String
+  emoji     String       @default("")
+  isDefault Boolean      @default(false)
+  type      CategoryType @default(EXPENSE)
+  user      User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses  Expense[]
+  incomes   Income[]
+
+  @@unique([userId, name])
+  @@map("categories")
+}
+
+model Expense {
+  id                 String           @id @default(cuid())
+  userId             String
+  description        String
+  amount             Float
+  type               ExpenseType
+  categoryId         String
+  date               DateTime
+  dueDay             Int?
+  status             ExpenseStatus    @default(PENDING)
+  paymentMethod      PaymentMethod?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  bankTransactionId  String?          @unique
+  installmentGroupId String?
+  installmentNumber  Int?
+  totalInstallments  Int?
+  fixedAmountType    FixedAmountType?
+  importBatchId      String?
+  currency           String           @default("BRL")
+  goal               ExpenseGoal?
+  history            ExpenseHistory[]
+  bankTransaction    BankTransaction? @relation(fields: [bankTransactionId], references: [id])
+  category           Category         @relation(fields: [categoryId], references: [id])
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, type])
+  @@index([installmentGroupId])
+  @@map("expenses")
+}
+
+model ExpenseHistory {
+  id        String   @id @default(cuid())
+  expenseId String
+  month     String
+  amount    Float
+  createdAt DateTime @default(now())
+  expense   Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, month])
+  @@index([expenseId])
+  @@map("expense_history")
+}
+
+model ExpenseGoal {
+  id        String  @id @default(cuid())
+  expenseId String  @unique
+  limit     Float
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@map("expense_goals")
+}
+
+model InvestmentType {
+  id          String             @id @default(cuid())
+  name        String             @unique
+  category    InvestmentCategory
+  isDefault   Boolean            @default(false)
+  investments Investment[]
+
+  @@map("investment_types")
+}
+
+model Investment {
+  id                 String               @id @default(cuid())
+  userId             String
+  name               String
+  investmentTypeId   String
+  amountInvested     Float
+  currentValue       Float?
+  applicationDate    DateTime
+  maturityDate       DateTime?
+  yieldDescription   String
+  yieldType          YieldType
+  yieldRate          Float?
+  institution        String
+  status             InvestmentStatus     @default(ACTIVE)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  assetId            String?
+  averagePrice       Float?
+  purchaseDate       DateTime?
+  quantity           Float?
+  treasuryIndex      String?
+  treasuryRate       Float?
+  treasuryTitle      String?
+  amountProfit       Float?
+  annualRate         Float?
+  lastMonthRate      Float?
+  pluggyInvestmentId String?              @unique
+  snapshots          InvestmentSnapshot[]
+  asset              Asset?               @relation(fields: [assetId], references: [id])
+  investmentType     InvestmentType       @relation(fields: [investmentTypeId], references: [id])
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("investments")
+}
+
+model InvestmentSnapshot {
+  id           String     @id @default(cuid())
+  investmentId String
+  userId       String
+  month        String
+  value        Float
+  createdAt    DateTime   @default(now())
+  investment   Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([investmentId, month])
+  @@index([userId])
+  @@map("investment_snapshots")
+}
+
+model Asset {
+  id           String       @id @default(cuid())
+  ticker       String       @unique
+  name         String
+  type         AssetType
+  sector       String?
+  currency     String       @default("BRL")
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  priceHistory AssetPrice[]
+  investments  Investment[]
+
+  @@map("assets")
+}
+
+model AssetPrice {
+  id        String   @id @default(cuid())
+  assetId   String
+  price     Float
+  date      DateTime
+  source    String
+  createdAt DateTime @default(now())
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, date])
+  @@index([assetId, date])
+  @@map("asset_prices")
+}
+
+model SimulationScenario {
+  id             String   @id @default(cuid())
+  userId         String
+  name           String
+  initialAmount  Float
+  monthlyDeposit Float
+  annualRate     Float
+  periodMonths   Int
+  interestType   String
+  referenceIndex String?
+  totalAmount    Float?
+  totalInvested  Float?
+  totalYield     Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("simulation_scenarios")
+}
+
+model UserSettings {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  aiProvider           String   @default("google")
+  aiApiKey             String?
+  aiModel              String   @default("auto")
+  theme                String   @default("dark")
+  accentColor          String   @default("blue")
+  language             String   @default("pt-BR")
+  fontSize             String   @default("medium")
+  currency             String   @default("BRL")
+  dateFormat           String   @default("DD/MM/YYYY")
+  startDayOfMonth      Int      @default(1)
+  alertExpenseAbove    Boolean  @default(true)
+  alertInvestmentDrop  Boolean  @default(true)
+  alertBillDue         Boolean  @default(true)
+  aiIncludeInvestments Boolean  @default(true)
+  aiIncludeExpenses    Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+model EconomicRate {
+  id        String   @id @default(cuid())
+  type      String
+  value     Float
+  date      DateTime
+  source    String   @default("BCB")
+  createdAt DateTime @default(now())
+
+  @@unique([type, date])
+  @@index([type, date])
+  @@map("economic_rates")
+}
+
+model BankConnection {
+  id            String               @id @default(cuid())
+  userId        String
+  pluggyItemId  String               @unique
+  connectorName String
+  status        BankConnectionStatus @default(ACTIVE)
+  lastSyncAt    DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  accounts      BankAccount[]
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("bank_connections")
+}
+
+model BankAccount {
+  id               String            @id @default(cuid())
+  bankConnectionId String
+  pluggyAccountId  String            @unique
+  name             String
+  type             String
+  balance          Float             @default(0)
+  currencyCode     String            @default("BRL")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  bankConnection   BankConnection    @relation(fields: [bankConnectionId], references: [id], onDelete: Cascade)
+  transactions     BankTransaction[]
+
+  @@index([bankConnectionId])
+  @@map("bank_accounts")
+}
+
+model BankTransaction {
+  id                 String      @id @default(cuid())
+  bankAccountId      String
+  pluggyTxId         String      @unique
+  description        String
+  amount             Float
+  date               DateTime
+  type               String
+  category           String?
+  createdAt          DateTime    @default(now())
+  imported           Boolean     @default(false)
+  installmentGroupId String?
+  installmentNumber  Int?
+  operationType      String?
+  totalInstallments  Int?
+  bankAccount        BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  expense            Expense?
+  income             Income?
+
+  @@index([bankAccountId, date])
+  @@index([installmentGroupId])
+  @@map("bank_transactions")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("chat_messages")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  metadata  String?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model SystemMetric {
+  id        String   @id @default(cuid())
+  key       String
+  value     String
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+  @@map("system_metrics")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ExpenseType {
+  FIXED
+  VARIABLE
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT
+  DEBIT
+  PIX
+}
+
+enum ExpenseStatus {
+  PAID
+  PENDING
+}
+
+enum Recurrence {
+  MONTHLY
+  ONE_TIME
+  CONTRACT
+}
+
+enum CategoryType {
+  EXPENSE
+  INCOME
+  BOTH
+}
+
+enum FixedAmountType {
+  FIXED_AMOUNT
+  VARIABLE_AMOUNT
+}
+
+enum NotificationType {
+  BILL_DUE
+  EXPENSE_ABOVE
+  VARIABLE_AMOUNT_NEEDED
+  CONTRACT_ENDING
+}
+
+enum InvestmentCategory {
+  FIXED_INCOME
+  VARIABLE_INCOME
+  OTHER
+}
+
+enum InvestmentStatus {
+  ACTIVE
+  REDEEMED
+}
+
+enum YieldType {
+  CDI_PERCENTAGE
+  SELIC
+  IPCA_PLUS
+  PREFIXED
+  POUPANCA
+  VARIABLE
+}
+
+enum AssetType {
+  STOCK
+  FII
+  ETF
+  BDR
+  CRYPTO
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum BankConnectionStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+}

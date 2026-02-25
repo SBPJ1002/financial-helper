@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: finhelper
+      POSTGRES_USER: finhelper
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-finhelper123}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@finhelper.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  pgdata:

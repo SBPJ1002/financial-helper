@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatorio Tecnico Completo — Financial Helper</title>
+  <style>
+    :root{--bg:#0f172a;--s:#1e293b;--s2:#334155;--b:#475569;--t:#f1f5f9;--t2:#94a3b8;--p:#6366f1;--pl:#818cf8;--g:#22c55e;--r:#ef4444;--a:#f59e0b;--c:#06b6d4;--pk:#ec4899}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--t);line-height:1.6;padding:2rem}
+    .ctn{max-width:1400px;margin:0 auto}
+    header{text-align:center;margin-bottom:3rem;padding:2.5rem;background:linear-gradient(135deg,var(--p),var(--pk));border-radius:16px}
+    header h1{font-size:2.4rem;font-weight:800;margin-bottom:.3rem}
+    header p{font-size:1rem;opacity:.85}
+    header .dt{font-size:.85rem;opacity:.7;margin-top:.5rem}
+    h2{font-size:1.35rem;font-weight:700;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:2px solid var(--p)}
+    h3{font-size:1.05rem;font-weight:600;margin-bottom:.6rem;color:var(--pl)}
+    h4{font-size:.95rem;font-weight:600;margin:.75rem 0 .4rem;color:var(--t)}
+    h5{font-size:.85rem;font-weight:600;margin:.5rem 0 .3rem;color:var(--c)}
+    .c{background:var(--s);border:1px solid var(--b);border-radius:12px;padding:1.5rem;margin-bottom:1rem}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+    .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+    @media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}body{padding:1rem}}
+    .st{background:var(--s);border:1px solid var(--b);border-radius:12px;padding:1.15rem;text-align:center}
+    .st .v{font-size:1.5rem;font-weight:800}
+    .st .l{font-size:.78rem;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;margin-top:.2rem}
+    table{width:100%;border-collapse:collapse;font-size:.85rem}
+    th{text-align:left;padding:.6rem .7rem;background:var(--s2);color:var(--t2);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
+    td{padding:.5rem .7rem;border-bottom:1px solid var(--b);vertical-align:top}
+    tr:last-child td{border-bottom:none}
+    .bg{display:inline-block;padding:.12rem .55rem;border-radius:9999px;font-size:.73rem;font-weight:600}
+    .bg-g{background:rgba(34,197,94,.15);color:var(--g)}
+    .bg-r{background:rgba(239,68,68,.15);color:var(--r)}
+    .bg-a{background:rgba(245,158,11,.15);color:var(--a)}
+    .bg-c{background:rgba(6,182,212,.15);color:var(--c)}
+    .bg-p{background:rgba(99,102,241,.15);color:var(--pl)}
+    .bg-pk{background:rgba(236,72,153,.15);color:var(--pk)}
+    .tg{display:inline-block;padding:.2rem .5rem;border-radius:6px;font-size:.7rem;font-weight:500;background:var(--s2);color:var(--t2);margin:.1rem}
+    .tgr{display:flex;flex-wrap:wrap;gap:.4rem}
+    code{background:var(--s2);padding:.1rem .4rem;border-radius:4px;font-size:.8rem;font-family:'JetBrains Mono','Fira Code',monospace}
+    ul{list-style:none;padding:0}
+    ul li{padding:.3rem 0;border-bottom:1px solid rgba(71,85,105,.3);font-size:.85rem}
+    ul li:last-child{border-bottom:none}
+    .ft{font-family:'JetBrains Mono','Fira Code',monospace;font-size:.75rem;line-height:1.7;color:var(--t2)}
+    .ft .d{color:var(--pl);font-weight:600}
+    .ft .f{color:var(--t)}
+    .ft .cm{color:var(--t2);font-style:italic;opacity:.7}
+    .tc{columns:2;column-gap:2rem}
+    .tc a{color:var(--pl);text-decoration:none;display:block;padding:.25rem 0;font-size:.85rem}
+    .tc a:hover{text-decoration:underline}
+    .fn{font-family:'JetBrains Mono','Fira Code',monospace;font-size:.8rem;color:var(--c);background:var(--s2);padding:.15rem .45rem;border-radius:4px;display:inline-block;margin:.1rem 0}
+    .sd{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:.4rem;background:var(--g)}
+    p{margin-bottom:.5rem;font-size:.88rem}
+    section{margin-bottom:1rem}
+    .two{display:grid;grid-template-columns:2fr 1fr;gap:1rem}
+    @media(max-width:900px){.two{grid-template-columns:1fr}.tc{columns:1}}
+    .bar{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:.3rem 0}
+    .bar div{display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:600;min-width:24px}
+    .file-tree{font-family:'JetBrains Mono','Fira Code',monospace;font-size:.73rem;line-height:1.65;color:var(--t2)}
+    .file-tree .dir{color:var(--pl);font-weight:600}
+    .file-tree .file{color:var(--t)}
+    .file-tree .desc{color:var(--t2);font-style:italic;opacity:.7}
+    .step{display:flex;align-items:flex-start;gap:1rem;margin:.8rem 0}
+    .step-num{min-width:28px;height:28px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;flex-shrink:0}
+    .next{border-left:3px solid var(--p);padding-left:1rem;margin:.5rem 0}
+    .next h4{color:var(--pl)}
+  </style>
+</head>
+<body>
+<div class="ctn">
+
+<header>
+  <h1>Financial Helper</h1>
+  <p>Relatorio Tecnico Completo — Documentacao Exaustiva</p>
+  <div class="dt">Gerado em 15 de Fevereiro de 2026 | 110+ arquivos fonte | 21 modelos | 6 migrations</div>
+</header>
+
+<!-- SUMARIO -->
+<section>
+  <h2>Sumario</h2>
+  <div class="c tc">
+    <a href="#s1">1. Visao Geral</a>
+    <a href="#s2">2. Arquitetura e Todos os Arquivos</a>
+    <a href="#s3">3. Stack e Dependencias</a>
+    <a href="#s4">4. Banco de Dados Completo</a>
+    <a href="#s5">5. Historico de Migrations</a>
+    <a href="#s6">6. Paginas do Frontend</a>
+    <a href="#s7">7. Stores Zustand</a>
+    <a href="#s8">8. Componentes</a>
+    <a href="#s9">9. Servicos do Backend</a>
+    <a href="#s10">10. Rotas da API</a>
+    <a href="#s11">11. Controllers</a>
+    <a href="#s12">12. Validators</a>
+    <a href="#s13">13. Middleware e Config</a>
+    <a href="#s14">14. Open Finance (Pluggy)</a>
+    <a href="#s15">15. Pipeline de Importacao</a>
+    <a href="#s16">16. Inteligencia Artificial</a>
+    <a href="#s17">17. Jobs em Background</a>
+    <a href="#s18">18. Utilitarios e Hooks</a>
+    <a href="#s19">19. Seed do Banco de Dados</a>
+    <a href="#s20">20. Teste Realizado</a>
+    <a href="#s21">21. Melhorias Recentes</a>
+    <a href="#s22">22. Proximos Passos</a>
+  </div>
+</section>
+
+<!-- 1. VISAO GERAL -->
+<section id="s1">
+  <h2>1. Visao Geral</h2>
+  <div class="c">
+    <p>O <strong>Financial Helper</strong> e uma plataforma completa de gestao financeira pessoal construida como monorepo full-stack. Integra-se com o <strong>Open Finance brasileiro</strong> via Pluggy para importar automaticamente transacoes bancarias, investimentos e saldos. Oferece um assistente de IA (Google Gemini), simulador de investimentos com juros compostos, acompanhamento de evolucao de gastos, e dashboard analitico com graficos.</p>
+    <p>O sistema trabalha com dados brutos do Open Finance de forma generica — nao depende de um banco especifico. Ate o momento, o teste foi realizado com o <strong>banco XP</strong>.</p>
+  </div>
+  <div class="g4">
+    <div class="st"><div class="v" style="color:var(--pl)">15</div><div class="l">Paginas</div></div>
+    <div class="st"><div class="v" style="color:var(--c)">18</div><div class="l">Servicos Backend</div></div>
+    <div class="st"><div class="v" style="color:var(--g)">21</div><div class="l">Modelos no BD</div></div>
+    <div class="st"><div class="v" style="color:var(--a)">110+</div><div class="l">Arquivos Fonte</div></div>
+  </div>
+</section>
+
+<!-- 2. ARQUITETURA E TODOS OS ARQUIVOS -->
+<section id="s2">
+  <h2>2. Arquitetura e Todos os Arquivos</h2>
+
+  <div class="c">
+    <h3>Visao Geral da Arquitetura</h3>
+    <p>Monorepo com dois projetos independentes (<code>client/</code> e <code>server/</code>) que se comunicam via API REST. O frontend usa Vite como bundler com proxy para <code>/api</code> apontando para <code>localhost:3001</code>. O backend usa Express 5 com service layer pattern. PostgreSQL rodando via Docker Compose.</p>
+    <div class="tgr" style="margin-top:.5rem">
+      <span class="tg">Client: porta 5173 (dev)</span>
+      <span class="tg">Server: porta 3001</span>
+      <span class="tg">PostgreSQL: porta 5432</span>
+      <span class="tg">pgAdmin: porta 5050</span>
+    </div>
+  </div>
+
+  <!-- ROOT -->
+  <div class="c">
+    <h3>Arquivos Raiz /</h3>
+    <table>
+      <thead><tr><th>Arquivo</th><th>Papel</th></tr></thead>
+      <tbody>
+        <tr><td><code>docker-compose.yml</code></td><td>Define 2 servicos Docker: PostgreSQL 16 Alpine (banco <code>finhelper</code>, usuario <code>finhelper</code>, volume persistente <code>pgdata</code>) e pgAdmin 4 para administracao visual do BD.</td></tr>
+        <tr><td><code>package.json</code></td><td>Monorepo root. Scripts: <code>dev</code> (roda client+server em paralelo), <code>build</code> (client build → server build), <code>install:all</code>, <code>db:migrate</code>, <code>db:seed</code>, <code>db:studio</code>.</td></tr>
+        <tr><td><code>.env.example</code></td><td>Template de variaveis: DATABASE_URL, JWT_SECRET, JWT_EXPIRES_IN, GOOGLE_AI_API_KEY, PORT, NODE_ENV, CORS_ORIGIN, POSTGRES_PASSWORD.</td></tr>
+        <tr><td><code>.gitignore</code></td><td>Exclui node_modules, dist, .env, .DS_Store, .vscode/*, .idea, *.log, *.local.</td></tr>
+        <tr><td><code>package-lock.json</code></td><td>Lockfile do root para reproducibilidade de versoes.</td></tr>
+        <tr><td><code>relatorio.html</code></td><td>Este documento — relatorio tecnico completo da aplicacao.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CLIENT -->
+  <div class="c">
+    <h3>Client — Frontend (66 arquivos fonte)</h3>
+    <table>
+      <thead><tr><th>Arquivo</th><th>Papel</th></tr></thead>
+      <tbody>
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Configuracao</td></tr>
+        <tr><td><code>client/package.json</code></td><td>Dependencias do frontend. 8 deps de producao (React 19, Zustand 5, Recharts 3, Axios, Lucide, react-pluggy-connect, react-router-dom 7). 12 devDeps (Vite 7.3, Tailwind 4, TypeScript 5.9, ESLint 9).</td></tr>
+        <tr><td><code>client/vite.config.ts</code></td><td>Configuracao do Vite: plugins (react, tailwindcss), proxy de <code>/api</code> para <code>http://localhost:3001</code> com changeOrigin.</td></tr>
+        <tr><td><code>client/tsconfig.json</code></td><td>Referencia dois sub-configs: tsconfig.app.json (codigo fonte) e tsconfig.node.json (configs do Vite).</td></tr>
+        <tr><td><code>client/tsconfig.app.json</code></td><td>Target ES2022, module ESNext, JSX react-jsx, strict mode, bundler moduleResolution. Include: <code>src/</code>.</td></tr>
+        <tr><td><code>client/tsconfig.node.json</code></td><td>Target ES2023 para configs de Node.js (vite.config.ts). Include: <code>vite.config.ts</code>.</td></tr>
+        <tr><td><code>client/eslint.config.js</code></td><td>ESLint flat config com typescript-eslint, react-hooks e react-refresh plugins. Arquivos: <code>**/*.{ts,tsx}</code>.</td></tr>
+        <tr><td><code>client/src/index.css</code></td><td>Importa Tailwind CSS 4 via <code>@import "tailwindcss"</code>. Define variaveis CSS customizadas para tema, cores primarias/accent, border radius e tipografia.</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Entrypoints</td></tr>
+        <tr><td><code>client/src/main.tsx</code></td><td>Ponto de entrada React. Renderiza <code>&lt;App /&gt;</code> dentro de <code>&lt;StrictMode&gt;</code> no elemento <code>#root</code>.</td></tr>
+        <tr><td><code>client/src/App.tsx</code></td><td>Componente raiz. Configura BrowserRouter, ToastProvider, e todas as rotas. Inicializa tema (dark/light via classe CSS) e autenticacao (valida token no mount). 3 niveis de rotas: publicas (/, /login, /register), protegidas (ProtectedRoute → AppLayout), e admin (AdminRoute).</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Paginas (15)</td></tr>
+        <tr><td><code>src/pages/Dashboard.tsx</code></td><td>Resumo financeiro mensal: 5 stat cards, grafico de barras 6 meses (Recharts), pizza por categoria, top 5 gastos, contas bancarias.</td></tr>
+        <tr><td><code>src/pages/Expenses.tsx</code></td><td>3 abas (Income, Fixed, Variable) com navegacao por mes, filtros (busca, categoria, ordenacao), tabelas com badge de parcela e status, modais CRUD, export CSV.</td></tr>
+        <tr><td><code>src/pages/Investments.tsx</code></td><td>Portfolio com forms dinamicos por categoria (Renda Fixa/Variavel/Outros), graficos pizza+barra, calculo P&L automatico, atualizacao de cotacao.</td></tr>
+        <tr><td><code>src/pages/Banking.tsx</code></td><td>Integracao Open Finance: widget Pluggy Connect, lista de contas+saldos, historico de transacoes paginado, sync e import.</td></tr>
+        <tr><td><code>src/pages/Evolution.tsx</code></td><td>Historico de despesas fixas com tendencia, modo comparacao (ate 4 despesas em line chart), metas/limites, projecao por media movel ponderada.</td></tr>
+        <tr><td><code>src/pages/Assistant.tsx</code></td><td>Chat com "Finley" (IA): mensagem de boas-vindas com acoes rapidas, renderizacao markdown, exibe provider/modelo.</td></tr>
+        <tr><td><code>src/pages/Simulator.tsx</code></td><td>Simulacao de juros simples/compostos com atalhos para taxas BCB, criacao/edicao/duplicacao de cenarios, line chart comparativo.</td></tr>
+        <tr><td><code>src/pages/SettingsPage.tsx</code></td><td>6 secoes: Perfil, Aparencia, Assistente IA (provider/key/modelo com auto-deteccao e teste), Open Finance, Notificacoes, Dados/Privacidade.</td></tr>
+        <tr><td><code>src/pages/LandingPage.tsx</code></td><td>Pagina publica com 11 secoes: Navbar, Hero, CredibilityBar, Features, HowItWorks, InvestmentsShowcase, AIAssistantShowcase, DashboardPreview, Security, CTA, Footer.</td></tr>
+        <tr><td><code>src/pages/Login.tsx</code></td><td>Formulario email/senha com tratamento de erros e link para registro.</td></tr>
+        <tr><td><code>src/pages/Register.tsx</code></td><td>Wizard 3 etapas: (1) Email+senha com validacao, (2) Nome+CPF+nascimento+genero, (3) Endereco com auto-preenchimento via ViaCEP.</td></tr>
+        <tr><td><code>src/pages/admin/AdminDashboard.tsx</code></td><td>Metricas admin: usuarios totais/ativos, sessoes 7 dias, contagens de dados.</td></tr>
+        <tr><td><code>src/pages/admin/AdminUsers.tsx</code></td><td>Listagem de usuarios com ativacao/desativacao e alteracao de role.</td></tr>
+        <tr><td><code>src/pages/admin/AdminRates.tsx</code></td><td>Gestao de taxas economicas (SELIC, CDI, IPCA, etc.) com botao de refresh.</td></tr>
+        <tr><td><code>src/pages/admin/AdminLogs.tsx</code></td><td>Visualizador paginado de logs/metricas do sistema com filtro por tipo.</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Stores Zustand (7)</td></tr>
+        <tr><td><code>src/stores/useAuthStore.ts</code></td><td>Estado: user, token, isLoading, isInitialized. Actions: login, register, logout, initialize. Persiste token no localStorage.</td></tr>
+        <tr><td><code>src/stores/useFinanceStore.ts</code></td><td>Estado: incomes[], expenses[], investments[], categories[], investmentTypes[], dashboardSummary. CRUD completo para cada entidade. Getters derivados: fixedExpenses(), variableExpenses(). Expense history e goals.</td></tr>
+        <tr><td><code>src/stores/useBankingStore.ts</code></td><td>Estado: connections[], accounts[], transactions[] (paginado), isAvailable. Actions: checkAvailability, getConnectToken, fetchConnections, syncConnection, deleteConnection, importTransactions.</td></tr>
+        <tr><td><code>src/stores/useChatStore.ts</code></td><td>Estado: messages[], loading. Actions: fetchHistory, sendMessage (UI otimista — mostra msg antes da resposta), clearHistory.</td></tr>
+        <tr><td><code>src/stores/useScenarioStore.ts</code></td><td>Estado: scenarios[], loading. CRUD + duplicate. Auto-recalculo de totalAmount/totalInvested/totalYield.</td></tr>
+        <tr><td><code>src/stores/useSettingsStore.ts</code></td><td>Estado: theme (dark/light). Action: toggleTheme. Persiste via zustand persist middleware no localStorage.</td></tr>
+        <tr><td><code>src/stores/useUserSettingsStore.ts</code></td><td>Estado: settings (AI config, tema, alertas, contexto). Actions: fetchSettings, updateSettings, testAiConnection.</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Componentes UI (10)</td></tr>
+        <tr><td><code>src/components/ui/Button.tsx</code></td><td>Props: variant (primary/secondary/danger/ghost), size (sm/md/lg), disabled, onClick, className, children. Botao estilizado com Tailwind.</td></tr>
+        <tr><td><code>src/components/ui/Input.tsx</code></td><td>Props: label, icon (Lucide), error, placeholder, type, value, onChange, className. Input com label, icone opcional e mensagem de erro.</td></tr>
+        <tr><td><code>src/components/ui/Select.tsx</code></td><td>Props: label, options ({value, label}[]), value, onChange, className. Dropdown estilizado.</td></tr>
+        <tr><td><code>src/components/ui/Modal.tsx</code></td><td>Props: isOpen, onClose, title, children, maxWidth. Dialog com backdrop, animacao fade, botao fechar (X).</td></tr>
+        <tr><td><code>src/components/ui/Card.tsx</code></td><td>Props: children, className. Container com borda, padding e border-radius padrao.</td></tr>
+        <tr><td><code>src/components/ui/Badge.tsx</code></td><td>Props: variant (default/success/danger/warning/info), children, className. Chip colorido inline.</td></tr>
+        <tr><td><code>src/components/ui/StatCard.tsx</code></td><td>Props: label, value, icon, color. Card de metrica com icone, label e valor formatado.</td></tr>
+        <tr><td><code>src/components/ui/Toast.tsx</code></td><td>Exporta <code>ToastProvider</code> (context provider) e hook <code>useToast()</code> que retorna <code>toast.success(msg)</code>, <code>toast.error(msg)</code>, <code>toast.info(msg)</code>. Auto-dismiss em 3s.</td></tr>
+        <tr><td><code>src/components/ui/ConfirmDialog.tsx</code></td><td>Props: isOpen, title, message, confirmLabel, onConfirm, onCancel. Dialog de confirmacao para acoes destrutivas (deletar).</td></tr>
+        <tr><td><code>src/components/ui/EmptyState.tsx</code></td><td>Props: icon, title, description, action (botao opcional). Placeholder visual quando nao ha dados.</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Layout e Routing (4)</td></tr>
+        <tr><td><code>src/components/layout/AppLayout.tsx</code></td><td>Shell principal: Sidebar fixa a esquerda + area de conteudo com <code>&lt;Outlet /&gt;</code> para rotas aninhadas. Responsivo com menu hamburger em mobile.</td></tr>
+        <tr><td><code>src/components/layout/Sidebar.tsx</code></td><td>Menu lateral com icones Lucide, item ativo destacado, secao do usuario com nome/email, botao logout. Links: Dashboard, Despesas, Evolucao, Investimentos, Banking, Simulador, Assistente, Configuracoes. Link Admin se role===ADMIN.</td></tr>
+        <tr><td><code>src/components/ProtectedRoute.tsx</code></td><td>Route guard: verifica se usuario esta autenticado (token valido). Se nao, redireciona para /login. Renderiza <code>&lt;Outlet /&gt;</code> se autenticado.</td></tr>
+        <tr><td><code>src/components/AdminRoute.tsx</code></td><td>Route guard: verifica se user.role === 'ADMIN'. Se nao, redireciona para /dashboard.</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Landing Page (12)</td></tr>
+        <tr><td><code>src/components/landing/LandingNavbar.tsx</code></td><td>Navbar fixa com logo, links de ancora (#features, #investments, #security), botoes Login/Cadastro. Menu mobile.</td></tr>
+        <tr><td><code>src/components/landing/HeroSection.tsx</code></td><td>Secao hero com titulo gradiente, subtitulo, CTAs "Comece Agora" e "Explorar", preview do dashboard com mockup.</td></tr>
+        <tr><td><code>src/components/landing/CredibilityBar.tsx</code></td><td>Barra com taxas reais do BCB (SELIC, CDI, IPCA, Dolar) via hook <code>usePublicRates()</code>. Badges: API oficial BCB, Criptografia, Calculos real-time, IA Integrada.</td></tr>
+        <tr><td><code>src/components/landing/FeaturesSection.tsx</code></td><td>Grid 3x2 com 6 features: Gestao de Gastos, Evolucao de Contas, Investimentos, SELIC em Tempo Real, Simulador, Assistente IA. Cada card com icone, titulo e descricao.</td></tr>
+        <tr><td><code>src/components/landing/HowItWorksSection.tsx</code></td><td>3 etapas: Cadastro, Conectar Banco, Dashboard pronto. Numeradas com icones.</td></tr>
+        <tr><td><code>src/components/landing/InvestmentsShowcase.tsx</code></td><td>Showcase dos tipos de investimento suportados com cards: Tesouro, CDB/LCI/LCA, Acoes, FIIs, ETFs, Crypto.</td></tr>
+        <tr><td><code>src/components/landing/AIAssistantShowcase.tsx</code></td><td>Preview do chat com Finley mostrando exemplo de conversa e capacidades da IA.</td></tr>
+        <tr><td><code>src/components/landing/DashboardPreview.tsx</code></td><td>Mockup visual do dashboard com graficos de exemplo e stat cards.</td></tr>
+        <tr><td><code>src/components/landing/SecuritySection.tsx</code></td><td>Secao sobre seguranca: criptografia AES-256, JWT com sessoes, dados no seu servidor, LGPD.</td></tr>
+        <tr><td><code>src/components/landing/CTASection.tsx</code></td><td>Call to action final com botao "Criar Conta Gratuita".</td></tr>
+        <tr><td><code>src/components/landing/LandingFooter.tsx</code></td><td>Footer com links: Plataforma, Recursos, Conta. Branding com logo e descricao.</td></tr>
+        <tr><td><code>src/components/landing/ScrollReveal.tsx</code></td><td>HOC de animacao: usa IntersectionObserver (threshold 0.1) para fade-in + translate-y quando elemento entra no viewport. Props: children, className, delay.</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Servicos, Hooks e Utilitarios</td></tr>
+        <tr><td><code>src/services/api.ts</code></td><td>Instancia Axios configurada com baseURL <code>/api</code>. Interceptor de request que injeta <code>Authorization: Bearer {token}</code> do localStorage. Interceptor de response que faz logout automatico em 401.</td></tr>
+        <tr><td><code>src/hooks/usePublicRates.ts</code></td><td>Hook customizado que busca <code>GET /api/rates/public</code> (sem auth). Retorna { rates, isLoading, error }. Usado na CredibilityBar da landing page.</td></tr>
+        <tr><td><code>src/utils/format.ts</code></td><td>11 funcoes: formatCurrency, formatPercent, formatDate, formatMonthYear, formatMonthYearPtBR, getCurrentMonth, getPreviousMonths, getMonthFromDate, navigateMonth, generateId, clamp.</td></tr>
+        <tr><td><code>src/utils/calculations.ts</code></td><td>5 funcoes: getAverage, getVariationPercent, getTrend (3 meses → increasing/stable/decreasing), getWeightedMovingAverage (6 periodos), simulateInvestment (juros simples/compostos).</td></tr>
+        <tr><td><code>src/utils/chartHelpers.ts</code></td><td>Formatadores para Recharts: currencyFormatter para tooltips.</td></tr>
+        <tr><td><code>src/utils/cpf.ts</code></td><td>3 funcoes: validateCPF (digitos verificadores), maskCPF (000.000.000-00), cleanCPF (remove pontuacao).</td></tr>
+        <tr><td><code>src/utils/viacep.ts</code></td><td>fetchAddress(cep): busca endereco via API ViaCEP. Retorna {logradouro, bairro, localidade, uf, complemento}.</td></tr>
+        <tr><td><code>src/types/index.ts</code></td><td>Define tipo <code>Theme = 'dark' | 'light'</code>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SERVER -->
+  <div class="c">
+    <h3>Server — Backend (80 arquivos fonte)</h3>
+    <table>
+      <thead><tr><th>Arquivo</th><th>Papel</th></tr></thead>
+      <tbody>
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Configuracao e Entrypoint</td></tr>
+        <tr><td><code>server/package.json</code></td><td>11 deps producao (Express 5, Prisma 6, bcryptjs, jsonwebtoken, helmet, express-rate-limit, node-cron, zod, cors, dotenv, @anthropic-ai/sdk). 12 devDeps (TypeScript 5.7, tsx, jest 30, prisma CLI).</td></tr>
+        <tr><td><code>server/tsconfig.json</code></td><td>Target ES2022, module ESNext, strict, bundler moduleResolution. rootDir: src/, outDir: dist/.</td></tr>
+        <tr><td><code>server/jest.config.ts</code></td><td>Configuracao Jest: preset ts-jest, testEnvironment node, moduleNameMapper para ESM (.js → .ts), extensoes .test.ts e .spec.ts.</td></tr>
+        <tr><td><code>server/src/app.ts</code></td><td>Configuracao Express: helmet(), cors(CORS_ORIGIN), rate-limit (200 req/15min), json parser (1MB limit), rotas /api, error handler global.</td></tr>
+        <tr><td><code>server/src/server.ts</code></td><td>Startup: conecta Prisma ao PostgreSQL, inicia cron jobs (<code>startAllJobs()</code>), escuta na porta PORT (3001).</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Config (2)</td></tr>
+        <tr><td><code>src/config/prisma.ts</code></td><td>Instancia singleton do PrismaClient. Connection pooling implicito via Prisma.</td></tr>
+        <tr><td><code>src/config/env.ts</code></td><td>Valida e exporta variaveis de ambiente com tipagem: DATABASE_URL, JWT_SECRET, ENCRYPTION_KEY, PLUGGY_CLIENT_ID, PLUGGY_CLIENT_SECRET, DEFAULT_AI_API_KEY, DEFAULT_AI_MODEL, PORT, NODE_ENV, CORS_ORIGIN.</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Middleware (4)</td></tr>
+        <tr><td><code>src/middleware/auth.ts</code></td><td><code>requireAuth</code>: extrai Bearer token, valida JWT, verifica sessao no BD (nao expirada), verifica usuario ativo. Anexa req.userId e req.userRole. <code>requireAdmin</code>: req.userRole === 'ADMIN'.</td></tr>
+        <tr><td><code>src/middleware/validate.ts</code></td><td>Factory <code>validate(zodSchema)</code>: valida req.body, retorna 400 com detalhes do erro Zod.</td></tr>
+        <tr><td><code>src/middleware/errorHandler.ts</code></td><td>Handler global: trata ApiError (custom com statusCode), ZodError (validacao), PrismaClientKnownRequestError (BD), erros genericos 500.</td></tr>
+        <tr><td><code>src/middleware/rateLimiter.ts</code></td><td>Factory que cria rate limiter com windowMs e max configuraveis. Aplicado em rotas de auth e chat.</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Services (18)</td></tr>
+        <tr><td><code>src/services/auth.service.ts</code></td><td>register (bcrypt hash + AES-256 CPF + SHA-256 dedup + JWT + seed categorias), login (bcrypt compare + sessao BD), logout (remove sessao), getMe.</td></tr>
+        <tr><td><code>src/services/income.service.ts</code></td><td>CRUD: list (orderBy date desc), create, update, remove.</td></tr>
+        <tr><td><code>src/services/expense.service.ts</code></td><td>CRUD + addHistory (upsert mês→valor), getHistory, setGoal (limite de gasto), removeGoal.</td></tr>
+        <tr><td><code>src/services/category.service.ts</code></td><td>list (default + custom), create (unique userId+name), remove (bloqueia se em uso ou default).</td></tr>
+        <tr><td><code>src/services/investment.service.ts</code></td><td>CRUD + getSummary (P&L por categoria) + getInvestmentTypes. Calculo automatico de currentValue: renda fixa via yieldCalculator (juros compostos pro-rata), renda variavel via preco do ativo x quantidade.</td></tr>
+        <tr><td><code>src/services/yieldCalculator.service.ts</code></td><td>parseYieldDescription (regex: "120% CDI", "IPCA + 6%", "12% a.a."). calculateCurrentValue (juros compostos com taxas reais BCB).</td></tr>
+        <tr><td><code>src/services/dashboard.service.ts</code></td><td>getSummary(userId, month): receita total, despesas fixas (deduplica manual vs importada), variaveis, saldo, savings rate, breakdown por categoria (nome+emoji+total), top 5.</td></tr>
+        <tr><td><code>src/services/chat.service.ts</code></td><td>Rate limit 10 msg/min. sendMessage (salva msg, monta prompt, busca historico 20 msgs, chama IA, salva resposta, registra metrica). getHistory, clearHistory.</td></tr>
+        <tr><td><code>src/services/ai.service.ts</code></td><td>Adapter pattern multi-provider. getAdapterForUser (factory). detectGeminiModel (auto-deteccao). GoogleAdapter: sendMessage, testConnection. testProviderConnection.</td></tr>
+        <tr><td><code>src/services/promptBuilder.service.ts</code></td><td>buildSystemPrompt(userId): monta prompt PT-BR com receitas, despesas, totais, investimentos, taxas BCB, contas bancarias, ultimas 30 transacoes, tendencias.</td></tr>
+        <tr><td><code>src/services/pluggy.service.ts</code></td><td>Integracao Pluggy: isPluggyEnabled, createConnectToken, getAccessToken (cache 2h), syncConnection (contas+transacoes 90 dias+investimentos), syncInvestments, mapPluggySubtype (36+ subtipos), mapPluggyYield, syncAllConnections.</td></tr>
+        <tr><td><code>src/services/transactionImport.service.ts</code></td><td>Pipeline de importacao: importTransactions, shouldSkipTransaction (3 camadas), cleanDescription, detectPaymentMethod, buildRecurrenceSet, normalizeDescription, mapCategory (27 mappings).</td></tr>
+        <tr><td><code>src/services/bcb.service.ts</code></td><td>API do BCB: series SELIC(432), CDI(12), IPCA(13522), POUPANCA(25), TR(226), IGPM(189), DOLAR(1). fetchAndStoreRates, getCurrentRates, getPublicRates, getRateHistory.</td></tr>
+        <tr><td><code>src/services/marketData.service.ts</code></td><td>Alpha Vantage: getStockQuote, getStockHistory, searchSymbol, getCryptoQuote. Cache 5 min, quota diaria 25 req. updatePortfolioPrices (batch).</td></tr>
+        <tr><td><code>src/services/asset.service.ts</code></td><td>searchAssets, getAssetById, getAssetByTicker, getLatestPrice, updateAssetPrice, updateMultiplePrices, createAsset.</td></tr>
+        <tr><td><code>src/services/scenario.service.ts</code></td><td>CRUD + duplicate("Copy of..."). Auto-calculo de totalAmount/totalInvested/totalYield com juros simples/compostos.</td></tr>
+        <tr><td><code>src/services/userSettings.service.ts</code></td><td>getSettings (mascara API key como "••••••••"), updateSettings (whitelist fields, criptografa API key), getDecryptedApiKey.</td></tr>
+        <tr><td><code>src/services/admin.service.ts</code></td><td>listUsers (paginado, com contagens), updateUser (isActive/role), getMetrics, getLogs (paginado com filtro).</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Controllers (14)</td></tr>
+        <tr><td><code>src/controllers/auth.controller.ts</code></td><td>register, login, logout, getMe — delega para authService.</td></tr>
+        <tr><td><code>src/controllers/income.controller.ts</code></td><td>list, create (201), update, remove.</td></tr>
+        <tr><td><code>src/controllers/expense.controller.ts</code></td><td>list (filtro type?), getById, create, update, remove, addHistory, getHistory, setGoal, removeGoal.</td></tr>
+        <tr><td><code>src/controllers/category.controller.ts</code></td><td>list, create (201), remove.</td></tr>
+        <tr><td><code>src/controllers/investment.controller.ts</code></td><td>list, getById, create, update, remove, getSummary, getTypes.</td></tr>
+        <tr><td><code>src/controllers/dashboard.controller.ts</code></td><td>getSummary (month query param ou mes atual).</td></tr>
+        <tr><td><code>src/controllers/chat.controller.ts</code></td><td>send, getHistory, clearHistory.</td></tr>
+        <tr><td><code>src/controllers/settings.controller.ts</code></td><td>getSettings, updateSettings, testAiConnection.</td></tr>
+        <tr><td><code>src/controllers/rate.controller.ts</code></td><td>getCurrent, getPublic, getHistory, refresh.</td></tr>
+        <tr><td><code>src/controllers/banking.controller.ts</code></td><td>checkAvailability, createConnectToken, listConnections, createConnection, deleteConnection, syncConnection, listAccounts, listTransactions, importTransactions.</td></tr>
+        <tr><td><code>src/controllers/asset.controller.ts</code></td><td>search, getById, updatePrice, updateMultiplePrices, createAsset.</td></tr>
+        <tr><td><code>src/controllers/scenario.controller.ts</code></td><td>list, getById, create, update, remove, duplicate.</td></tr>
+        <tr><td><code>src/controllers/market.controller.ts</code></td><td>getQuote, search, getHistory, getQuota, refreshPortfolio.</td></tr>
+        <tr><td><code>src/controllers/admin.controller.ts</code></td><td>listUsers, updateUser, getMetrics, refreshRates, getLogs.</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Routes (15)</td></tr>
+        <tr><td><code>src/routes/index.ts</code></td><td>Agrega todas sub-rotas sob /api. Endpoint publico GET /health.</td></tr>
+        <tr><td><code>src/routes/auth.routes.ts</code></td><td>POST /register (rate limit), POST /login (rate limit), POST /logout (auth), GET /me (auth).</td></tr>
+        <tr><td><code>src/routes/income.routes.ts</code></td><td>GET /, POST /, PUT /:id, DELETE /:id — todos auth.</td></tr>
+        <tr><td><code>src/routes/expense.routes.ts</code></td><td>GET /, GET /:id, POST /, PUT /:id, DELETE /:id, GET /:id/history, POST /:id/history, PUT /:id/goal, DELETE /:id/goal.</td></tr>
+        <tr><td><code>src/routes/category.routes.ts</code></td><td>GET /, POST /, DELETE /:id.</td></tr>
+        <tr><td><code>src/routes/investment.routes.ts</code></td><td>GET /, GET /summary, GET /types, GET /:id, POST /, PUT /:id, DELETE /:id.</td></tr>
+        <tr><td><code>src/routes/dashboard.routes.ts</code></td><td>GET /summary?month=YYYY-MM.</td></tr>
+        <tr><td><code>src/routes/chat.routes.ts</code></td><td>POST /send (rate limit IA), GET /history, DELETE /history.</td></tr>
+        <tr><td><code>src/routes/settings.routes.ts</code></td><td>GET /, PUT /, POST /ai/test.</td></tr>
+        <tr><td><code>src/routes/rate.routes.ts</code></td><td>GET /public (sem auth), GET /current, GET /history/:type, POST /refresh.</td></tr>
+        <tr><td><code>src/routes/banking.routes.ts</code></td><td>GET /available, POST /connect-token, GET /connections, POST /connections, DELETE /connections/:id, POST /connections/:id/sync, GET /accounts, GET /transactions, POST /import.</td></tr>
+        <tr><td><code>src/routes/asset.routes.ts</code></td><td>GET /search, GET /:id, POST /:id/price, POST /prices/batch, POST /.</td></tr>
+        <tr><td><code>src/routes/scenario.routes.ts</code></td><td>GET /, GET /:id, POST /, PUT /:id, DELETE /:id, POST /:id/duplicate.</td></tr>
+        <tr><td><code>src/routes/market.routes.ts</code></td><td>GET /quote/:symbol, GET /search, GET /history/:symbol, GET /quota, POST /refresh-portfolio.</td></tr>
+        <tr><td><code>src/routes/admin.routes.ts</code></td><td>GET /users, PATCH /users/:id, GET /metrics, POST /rates/refresh, GET /logs — todos auth+admin.</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Validators Zod (6)</td></tr>
+        <tr><td><code>src/validators/auth.validator.ts</code></td><td>registerSchema: fullName, email, password, cpf?, birthDate?, gender?, endereco (7 campos opcionais). loginSchema: email + password.</td></tr>
+        <tr><td><code>src/validators/income.validator.ts</code></td><td>description (string), amount (number > 0), date (string YYYY-MM-DD), recurrence (MONTHLY | ONE_TIME).</td></tr>
+        <tr><td><code>src/validators/expense.validator.ts</code></td><td>Schemas separados: FIXED (description, amount, categoryId, dueDay 1-31, status) e VARIABLE (description, amount, categoryId, date, paymentMethod).</td></tr>
+        <tr><td><code>src/validators/category.validator.ts</code></td><td>name (string min 1), emoji (string min 1).</td></tr>
+        <tr><td><code>src/validators/investment.validator.ts</code></td><td>Campos comuns + opcionais para renda variavel (assetId, quantity, averagePrice), tesouro (title, rate, index), Pluggy (pluggyInvestmentId).</td></tr>
+        <tr><td><code>src/validators/chat.validator.ts</code></td><td>message (string min 1 char).</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Jobs (3 arquivos)</td></tr>
+        <tr><td><code>src/jobs/index.ts</code></td><td>Scheduler node-cron: 5 jobs (Pluggy sync 06:00, BCB rates 08:00, portfolio prices 21:30 dias uteis, snapshots 1o do mes, cleanup semanal).</td></tr>
+        <tr><td><code>src/jobs/rateFetcher.job.ts</code></td><td>Re-exporta fetchAndStoreRates do bcb.service.</td></tr>
+        <tr><td><code>src/jobs/snapshotCreator.job.ts</code></td><td>createMonthlySnapshots(): para cada investimento ACTIVE, calcula valor e cria InvestmentSnapshot do mes anterior.</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Utils (5)</td></tr>
+        <tr><td><code>src/utils/apiError.ts</code></td><td>Classe <code>ApiError</code> estende Error com <code>statusCode</code>. Metodos estaticos: <code>badRequest(msg)</code> (400), <code>unauthorized(msg)</code> (401), <code>forbidden(msg)</code> (403), <code>notFound(msg)</code> (404), <code>conflict(msg)</code> (409). Usado por todos os services para erros HTTP tipados.</td></tr>
+        <tr><td><code>src/utils/encryption.ts</code></td><td>AES-256-GCM via <code>scryptSync</code> (derivacao de chave) + <code>randomBytes</code> (IV 16 bytes). <code>encrypt(text)</code> retorna string <code>iv:authTag:encrypted</code> em hex. <code>decrypt(hash)</code> reverte. Usado para API keys e CPF.</td></tr>
+        <tr><td><code>src/utils/jwt.ts</code></td><td><code>signToken(userId)</code>: gera JWT com payload {userId}, expira em 7 dias. <code>verifyToken(token)</code>: valida e retorna payload. <code>getTokenExpiresAt()</code>: retorna Date +7 dias. Usa JWT_SECRET do env.</td></tr>
+        <tr><td><code>src/utils/password.ts</code></td><td><code>hashPassword(plain)</code>: bcrypt com salt rounds 12. <code>comparePassword(plain, hash)</code>: bcrypt compare. Usado no auth.service para registro e login.</td></tr>
+        <tr><td><code>src/utils/cpf.ts</code></td><td><code>cleanCPF(cpf)</code>: remove pontuacao (. e -). <code>validateCPF(cpf)</code>: valida digitos verificadores (algoritmo modulo 11). Validacao server-side antes de criptografar.</td></tr>
+
+        <tr><td colspan="2" style="background:var(--s2);font-weight:600;color:var(--pl)">Prisma</td></tr>
+        <tr><td><code>prisma/schema.prisma</code></td><td>Schema completo: 21 modelos, 11 enums, indices e relacoes. Datasource PostgreSQL. Generator prisma-client-js.</td></tr>
+        <tr><td><code>prisma/seed.ts</code></td><td>Popula BD: admin + demo users, 10 categorias default, 21 tipos de investimento, 30 ativos (acoes/FII/ETF/BDR/crypto) com 6 meses de precos, dados demo (receita, despesas, investimentos), taxas economicas.</td></tr>
+        <tr><td><code>prisma/migrations/</code></td><td>6 migrations (ver secao 5).</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 3. STACK -->
+<section id="s3">
+  <h2>3. Stack Tecnologico e Dependencias</h2>
+  <div class="g2">
+    <div class="c">
+      <h3>Frontend — Dependencias de Producao</h3>
+      <table>
+        <thead><tr><th>Pacote</th><th>Versao</th><th>Uso</th></tr></thead>
+        <tbody>
+          <tr><td>react</td><td>^19.2.0</td><td>Biblioteca UI principal</td></tr>
+          <tr><td>react-dom</td><td>^19.2.0</td><td>Renderizacao DOM</td></tr>
+          <tr><td>react-router-dom</td><td>^7.13.0</td><td>Roteamento SPA com nested routes</td></tr>
+          <tr><td>zustand</td><td>^5.0.11</td><td>Gerenciamento de estado (7 stores)</td></tr>
+          <tr><td>axios</td><td>^1.13.5</td><td>HTTP client com interceptors</td></tr>
+          <tr><td>recharts</td><td>^3.7.0</td><td>Graficos (bar, pie, line)</td></tr>
+          <tr><td>lucide-react</td><td>^0.563.0</td><td>Biblioteca de icones</td></tr>
+          <tr><td>react-pluggy-connect</td><td>^2.12.0</td><td>Widget oficial Pluggy para Open Finance</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="c">
+      <h3>Backend — Dependencias de Producao</h3>
+      <table>
+        <thead><tr><th>Pacote</th><th>Versao</th><th>Uso</th></tr></thead>
+        <tbody>
+          <tr><td>express</td><td>^5.1.0</td><td>Framework HTTP (v5 com async/await nativo)</td></tr>
+          <tr><td>@prisma/client</td><td>^6.5.0</td><td>ORM para PostgreSQL</td></tr>
+          <tr><td>zod</td><td>^3.24.0</td><td>Validacao de schemas</td></tr>
+          <tr><td>jsonwebtoken</td><td>^9.0.2</td><td>Autenticacao JWT</td></tr>
+          <tr><td>bcryptjs</td><td>^2.4.3</td><td>Hash de senhas</td></tr>
+          <tr><td>helmet</td><td>^8.1.0</td><td>Headers de seguranca HTTP</td></tr>
+          <tr><td>express-rate-limit</td><td>^7.5.0</td><td>Rate limiting por IP</td></tr>
+          <tr><td>node-cron</td><td>^3.0.3</td><td>Agendamento de tarefas (5 cron jobs)</td></tr>
+          <tr><td>cors</td><td>^2.8.5</td><td>Cross-Origin Resource Sharing</td></tr>
+          <tr><td>dotenv</td><td>^17.2.4</td><td>Variaveis de ambiente .env</td></tr>
+          <tr><td>@anthropic-ai/sdk</td><td>^0.74.0</td><td>SDK Anthropic (reserva futura, atualmente usando Google)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="c">
+      <h3>Frontend — DevDependencies</h3>
+      <div class="tgr">
+        <span class="tg">Vite 7.3</span><span class="tg">@vitejs/plugin-react 5.1</span><span class="tg">Tailwind CSS 4.1</span><span class="tg">@tailwindcss/vite 4.1</span><span class="tg">TypeScript 5.9</span><span class="tg">ESLint 9.39</span><span class="tg">typescript-eslint 8.48</span><span class="tg">eslint-plugin-react-hooks 7</span><span class="tg">eslint-plugin-react-refresh 0.4</span><span class="tg">globals 16.5</span><span class="tg">@types/react 19.2</span><span class="tg">@types/node 24.10</span>
+      </div>
+    </div>
+    <div class="c">
+      <h3>Backend — DevDependencies</h3>
+      <div class="tgr">
+        <span class="tg">TypeScript 5.7</span><span class="tg">tsx 4.19 (dev runner)</span><span class="tg">prisma CLI 6.5</span><span class="tg">jest 30</span><span class="tg">ts-jest 29.4</span><span class="tg">@types/bcryptjs</span><span class="tg">@types/cors</span><span class="tg">@types/express 5</span><span class="tg">@types/jsonwebtoken</span><span class="tg">@types/node 22</span><span class="tg">@types/node-cron</span><span class="tg">@types/jest 30</span>
+      </div>
+    </div>
+  </div>
+  <div class="c">
+    <h3>Infraestrutura</h3>
+    <table>
+      <thead><tr><th>Servico</th><th>Imagem/Tecnologia</th><th>Config</th></tr></thead>
+      <tbody>
+        <tr><td>PostgreSQL</td><td>postgres:16-alpine</td><td>Porta 5432, banco <code>finhelper</code>, usuario <code>finhelper</code>, volume <code>pgdata</code>, restart unless-stopped</td></tr>
+        <tr><td>pgAdmin</td><td>dpage/pgadmin4</td><td>Porta 5050, admin@finhelper.com, depende do PostgreSQL</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 4. BANCO DE DADOS -->
+<section id="s4">
+  <h2>4. Banco de Dados — 21 Modelos, 11 Enums (Todos os Campos)</h2>
+
+  <div class="c">
+    <h3>Enums</h3>
+    <table>
+      <thead><tr><th>Enum</th><th>Valores</th><th>Onde e usado</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Role</strong></td><td>USER, ADMIN</td><td>User.role — controle de acesso admin</td></tr>
+        <tr><td><strong>ExpenseType</strong></td><td>FIXED, VARIABLE</td><td>Expense.type — despesa fixa (recorrente) ou variavel (pontual)</td></tr>
+        <tr><td><strong>PaymentMethod</strong></td><td>CASH, CREDIT, DEBIT, PIX</td><td>Expense.paymentMethod — como foi pago</td></tr>
+        <tr><td><strong>ExpenseStatus</strong></td><td>PAID, PENDING</td><td>Expense.status — ja pago ou pendente</td></tr>
+        <tr><td><strong>Recurrence</strong></td><td>MONTHLY, ONE_TIME</td><td>Income.recurrence — receita mensal recorrente ou unica</td></tr>
+        <tr><td><strong>InvestmentCategory</strong></td><td>FIXED_INCOME, VARIABLE_INCOME, OTHER</td><td>InvestmentType.category — classificacao macro</td></tr>
+        <tr><td><strong>InvestmentStatus</strong></td><td>ACTIVE, REDEEMED</td><td>Investment.status — ativo ou resgatado</td></tr>
+        <tr><td><strong>YieldType</strong></td><td>CDI_PERCENTAGE, SELIC, IPCA_PLUS, PREFIXED, POUPANCA, VARIABLE</td><td>Investment.yieldType — tipo de rendimento para calculo</td></tr>
+        <tr><td><strong>AssetType</strong></td><td>STOCK, FII, ETF, BDR, CRYPTO</td><td>Asset.type — tipo de ativo de renda variavel</td></tr>
+        <tr><td><strong>Gender</strong></td><td>MALE, FEMALE, OTHER, PREFER_NOT_TO_SAY</td><td>User.gender — dados opcionais do perfil</td></tr>
+        <tr><td><strong>BankConnectionStatus</strong></td><td>ACTIVE, INACTIVE, ERROR</td><td>BankConnection.status — estado da conexao Open Finance</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="c" style="overflow-x:auto">
+    <h3>Todos os Modelos com Todos os Campos</h3>
+    <table>
+      <thead><tr><th>Campo</th><th>Tipo</th><th>Req?</th><th>Default/Unique/Index</th><th>Como foi construido</th></tr></thead>
+      <tbody>
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">User — Dados do usuario com perfil completo e endereco</td></tr>
+        <tr><td>id</td><td>String</td><td>Sim</td><td>@id @default(cuid())</td><td>ID unico gerado automaticamente pelo Prisma</td></tr>
+        <tr><td>email</td><td>String</td><td>Sim</td><td>@unique</td><td>Email do usuario, usado para login</td></tr>
+        <tr><td>fullName</td><td>String</td><td>Sim</td><td>—</td><td>Nome completo informado no registro etapa 2</td></tr>
+        <tr><td>password</td><td>String</td><td>Sim</td><td>—</td><td>Hash bcrypt da senha (12 rounds)</td></tr>
+        <tr><td>role</td><td>Role</td><td>Sim</td><td>@default(USER)</td><td>USER para usuarios normais, ADMIN para administradores</td></tr>
+        <tr><td>isActive</td><td>Boolean</td><td>Sim</td><td>@default(true)</td><td>Admin pode desativar contas</td></tr>
+        <tr><td>cpf</td><td>String?</td><td>Nao</td><td>—</td><td>CPF criptografado com AES-256 (reversivel para exibicao mascarada)</td></tr>
+        <tr><td>cpfHash</td><td>String?</td><td>Nao</td><td>@unique</td><td>SHA-256 do CPF para deduplicacao sem expor o valor original</td></tr>
+        <tr><td>birthDate</td><td>DateTime?</td><td>Nao</td><td>—</td><td>Data de nascimento (registro etapa 2)</td></tr>
+        <tr><td>gender</td><td>Gender?</td><td>Nao</td><td>—</td><td>Genero (registro etapa 2)</td></tr>
+        <tr><td>emailVerified</td><td>Boolean</td><td>Sim</td><td>@default(false)</td><td>Reservado para verificacao de email futura</td></tr>
+        <tr><td>lastLoginAt</td><td>DateTime?</td><td>Nao</td><td>—</td><td>Atualizado a cada login bem-sucedido</td></tr>
+        <tr><td>zipCode...state</td><td>String? (7 campos)</td><td>Nao</td><td>—</td><td>Endereco preenchido via ViaCEP no registro etapa 3</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">Session — Sessoes JWT com expiração no BD</td></tr>
+        <tr><td>id, userId, token (@unique), expiresAt, createdAt</td><td colspan="4">Sessao criada no login, removida no logout. Cleanup semanal de expiradas. Cascade delete com User.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">Income — Receitas (salario, freelance, etc.)</td></tr>
+        <tr><td>id, userId, description, amount (Float), date (DateTime), recurrence (MONTHLY|ONE_TIME), bankTransactionId? (@unique)</td><td colspan="4">Criada manualmente ou via importacao de transacoes CREDIT do banco. bankTransactionId liga 1:1 a BankTransaction.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">Category — Categorias de despesa</td></tr>
+        <tr><td>id, userId?, name, emoji, isDefault</td><td colspan="4">10 categorias default no seed (Housing, Food, Transport...). Custom por usuario. @@unique(userId, name) evita duplicatas.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">Expense — Despesas fixas e variaveis</td></tr>
+        <tr><td>id, userId, description, amount, type (FIXED|VARIABLE), categoryId, date, dueDay? (Int 1-31), status (PAID|PENDING), paymentMethod? (CREDIT|DEBIT|PIX|CASH)</td><td colspan="4">Criada manualmente ou via importacao. Tipo FIXED se recorrente (2+ meses), VARIABLE caso contrario.</td></tr>
+        <tr><td>bankTransactionId? (@unique)</td><td colspan="4">Vinculo 1:1 com transacao bancaria original. Presenca indica importada vs manual.</td></tr>
+        <tr><td>installmentNumber?, totalInstallments?, installmentGroupId?</td><td colspan="4">Metadados de parcela do cartao de credito. Ex: 3/6 = parcela 3 de 6. Preservados do Pluggy para exibicao de badge na UI.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">ExpenseHistory — Historico mensal de valores</td></tr>
+        <tr><td>id, expenseId, month (String "YYYY-MM"), amount</td><td colspan="4">Upsert por expenseId+month. Usado na pagina Evolucao para tracking de contas que variam (luz, agua, gas).</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">ExpenseGoal — Meta/limite de gasto</td></tr>
+        <tr><td>id, expenseId (@unique), limit (Float)</td><td colspan="4">Limite maximo para uma despesa. Alerta visual na Evolucao quando valor ultrapassa.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">InvestmentType — Tipos de investimento</td></tr>
+        <tr><td>id, name (@unique), category (FIXED_INCOME|VARIABLE_INCOME|OTHER), isDefault</td><td colspan="4">21 tipos no seed: Treasury Selic/IPCA+/Prefixado/Renda+/Educa+, CDB, LCI, LCA, CRI, CRA, Debentures, COE, Acoes, FII, ETF, BDR, Crypto, Fundos, Previdencia, Poupanca. Auto-criados pelo Pluggy se necessario.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">Investment — Investimentos com campos por categoria</td></tr>
+        <tr><td>Campos comuns: id, userId, name, investmentTypeId, amountInvested, currentValue?, applicationDate, maturityDate?, yieldDescription, yieldType, yieldRate?, institution, status (ACTIVE|REDEEMED)</td><td colspan="4">Criado manualmente ou sincronizado via Pluggy /investments.</td></tr>
+        <tr><td>Renda variavel: assetId?, quantity?, averagePrice?, purchaseDate?</td><td colspan="4">Link com Asset para calcular valor atual = preco x quantidade.</td></tr>
+        <tr><td>Tesouro: treasuryTitle?, treasuryRate?, treasuryIndex?</td><td colspan="4">Dados especificos: titulo (ex: Tesouro IPCA+ 2035), taxa (6%), indice (IPCA).</td></tr>
+        <tr><td>Pluggy: pluggyInvestmentId? (@unique), amountProfit?, lastMonthRate?, annualRate?</td><td colspan="4">Dados do Open Finance: ID unico Pluggy, lucro acumulado, rentabilidade mensal/anual.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">InvestmentSnapshot — Foto mensal do portfolio</td></tr>
+        <tr><td>id, investmentId, userId, month ("YYYY-MM"), value</td><td colspan="4">Criado pelo job mensal. @@unique(investmentId, month). Usado para graficos de evolucao do portfolio.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">Asset — Ativos de renda variavel</td></tr>
+        <tr><td>id, ticker (@unique), name, type (STOCK|FII|ETF|BDR|CRYPTO), sector?, currency ("BRL"), isActive</td><td colspan="4">30 ativos no seed (PETR4, VALE3, HGLG11, BOVA11, BTC, ETH...). Criados manualmente ou pelo seed.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">AssetPrice — Historico de cotacoes</td></tr>
+        <tr><td>id, assetId, price (Float), date, source (MANUAL|SEED|USER_UPDATE|ALPHA_VANTAGE)</td><td colspan="4">@@unique(assetId, date). Seed popula 6 meses. Alpha Vantage atualiza em dias uteis.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">SimulationScenario — Cenarios de simulacao</td></tr>
+        <tr><td>id, userId, name, initialAmount, monthlyDeposit, annualRate, periodMonths, interestType ("SIMPLE"|"COMPOUND"), referenceIndex?, totalAmount?, totalInvested?, totalYield?</td><td colspan="4">Totais auto-calculados no create/update. Duplicacao cria copia com sufixo "(copy)".</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">UserSettings — Preferencias e config IA</td></tr>
+        <tr><td>AI: aiProvider ("google"), aiApiKey? (AES-256), aiModel ("auto")</td><td colspan="4">API key criptografada com AES-256-CBC usando ENCRYPTION_KEY do .env. Modelo "auto" dispara detectGeminiModel().</td></tr>
+        <tr><td>Aparencia: theme ("dark"), accentColor ("blue"), language ("pt-BR"), fontSize ("medium")</td><td colspan="4">Personalizacao visual sincronizada com servidor.</td></tr>
+        <tr><td>Preferencias: currency ("BRL"), dateFormat ("DD/MM/YYYY"), startDayOfMonth (1)</td><td colspan="4">Configuracoes regionais.</td></tr>
+        <tr><td>Alertas: alertExpenseAbove, alertInvestmentDrop, alertBillDue (todos Boolean true)</td><td colspan="4">Toggles para notificacoes.</td></tr>
+        <tr><td>Contexto IA: aiIncludeInvestments, aiIncludeExpenses (ambos true)</td><td colspan="4">Controla quais dados financeiros sao enviados ao prompt da IA.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">EconomicRate — Taxas economicas do BCB</td></tr>
+        <tr><td>id, type (SELIC|CDI|IPCA|POUPANCA|TR|IGPM|DOLAR), value (Float % a.a.), date, source ("BCB")</td><td colspan="4">@@unique(type, date). Atualizadas diariamente pelo job BCB.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">BankConnection — Conexao Open Finance</td></tr>
+        <tr><td>id, userId, pluggyItemId (@unique), connectorName, status (ACTIVE|INACTIVE|ERROR), lastSyncAt?</td><td colspan="4">Criada quando usuario conecta banco via widget Pluggy. Status ERROR se sync falha.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">BankAccount — Contas bancarias</td></tr>
+        <tr><td>id, bankConnectionId, pluggyAccountId (@unique), name, type (String: BANK|CREDIT), balance (Float), currencyCode ("BRL")</td><td colspan="4">Sincronizadas do Pluggy. Pluggy envia type "BANK" (corrente) ou "CREDIT" (cartao).</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">BankTransaction — Transacoes bancarias brutas</td></tr>
+        <tr><td>id, bankAccountId, pluggyTxId (@unique), description, amount (Float), date, type (DEBIT|CREDIT), category? (ingles do Pluggy), imported (Boolean false)</td><td colspan="4">Dados brutos do Pluggy. Flag imported marca se ja foi convertida em Expense/Income.</td></tr>
+        <tr><td>operationType? (PIX|TED|DOC|BOLETO...), installmentNumber?, totalInstallments?, installmentGroupId?</td><td colspan="4">Metadados extras. operationType detecta PIX. installment* vem do creditCardMetadata do Pluggy.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">ChatMessage — Historico do assistente IA</td></tr>
+        <tr><td>id, userId, role ("user"|"assistant"), content (String), createdAt</td><td colspan="4">Armazena historico completo. Ultimas 20 msgs enviadas como contexto para a IA.</td></tr>
+
+        <tr><td colspan="5" style="background:var(--s2);font-weight:700;color:var(--pl);font-size:.9rem">SystemMetric — Metricas e logs do sistema</td></tr>
+        <tr><td>id, key (String), value (String), metadata? (JSON String), createdAt</td><td colspan="4">Registra eventos: sync_complete, chat_message, bcb_rates_updated, etc. Cleanup semanal >90 dias.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 5. MIGRATIONS -->
+<section id="s5">
+  <h2>5. Historico de Migrations</h2>
+  <div class="c" style="overflow-x:auto">
+    <table>
+      <thead><tr><th>#</th><th>Data</th><th>Nome</th><th>O que foi criado/alterado</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>11/02/2026</td><td><code>initial_migrate</code></td><td>Schema inicial completo: User, Session, Income, Category, Expense, ExpenseHistory, ExpenseGoal, InvestmentType, Investment, ChatMessage, EconomicRate. Todos os enums base.</td></tr>
+        <tr><td>2</td><td>12/02/2026</td><td><code>v4_assets_settings_scenarios</code></td><td>Adicionou: Asset, AssetPrice, UserSettings, SimulationScenario, InvestmentSnapshot. Campos de renda variavel no Investment (assetId, quantity, averagePrice). Campos de tesouro (treasuryTitle, treasuryRate, treasuryIndex).</td></tr>
+        <tr><td>3</td><td>15/02/2026</td><td><code>v5_enhanced_user_banking</code></td><td>Perfil do usuario expandido (CPF, birthDate, gender, endereco). Open Finance: BankConnection, BankAccount, BankTransaction, SystemMetric. Enum BankConnectionStatus.</td></tr>
+        <tr><td>4</td><td>15/02/2026</td><td><code>add_transaction_import_tracking</code></td><td>Campo <code>imported</code> (Boolean) e <code>bankTransactionId</code> no Expense e Income para rastrear transacoes ja convertidas.</td></tr>
+        <tr><td>5</td><td>15/02/2026</td><td><code>add_installment_and_operation_fields</code></td><td>Campos <code>operationType</code>, <code>installmentNumber</code>, <code>totalInstallments</code>, <code>installmentGroupId</code> no BankTransaction e Expense. Indices para installmentGroupId.</td></tr>
+        <tr><td>6</td><td>15/02/2026</td><td><code>add_pluggy_investment_fields</code></td><td>Campos <code>pluggyInvestmentId</code> (@unique), <code>amountProfit</code>, <code>lastMonthRate</code>, <code>annualRate</code> no Investment.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 6-8 CONDENSED: Pages, Stores, Components already in section 2 -->
+<section id="s6">
+  <h2>6. Paginas do Frontend — Detalhamento</h2>
+  <div class="c">
+    <p>As 15 paginas estao listadas na secao 2 com seus arquivos. Aqui o detalhamento das funcionalidades de cada uma:</p>
+    <h4>Dashboard.tsx</h4>
+    <p>Consome <code>GET /api/dashboard/summary?month=YYYY-MM</code>. Exibe 5 stat cards (receita total, despesas fixas, despesas variaveis, saldo, total investimentos). Grafico de barras Recharts com getPreviousMonths(6) mostrando receita vs despesa. Pizza breakdown por categoria com nome e emoji. Top 5 gastos do mes. Se ha contas bancarias, mostra resumo com nome/tipo/saldo.</p>
+
+    <h4>Expenses.tsx</h4>
+    <p>Pagina mais complexa do frontend (~800 linhas). Estado <code>month</code> com navegacao (&lt; Fevereiro 2026 &gt;). 3 abas com contagem: Income (N), Fixed (N), Variable (N). Cada aba tem tabela com colunas: Descricao, Valor (formatCurrency), Data (formatDate), Vencimento (dueDay), Categoria (nome+emoji), Status (badge PAID/PENDING), Pagamento (badge CREDIT/DEBIT/PIX), Acoes (editar/deletar). Badge de parcela: se totalInstallments > 1, exibe "(1/2)" ao lado da descricao. Filtros: busca por texto, categoria, ordenacao (valor asc/desc, data, nome). Modal CRUD com form dinamico por tipo. Export CSV. ConfirmDialog para deletar.</p>
+
+    <h4>Investments.tsx</h4>
+    <p>Form dinamico baseado no InvestmentType selecionado. Renda Fixa: campos de rendimento (yieldDescription), data de vencimento, taxa. Tesouro: titulo, taxa, indice (SELIC/IPCA). Renda Variavel: busca de ativo (ticker), quantidade, preco medio. Graficos: pizza por categoria (Fixed Income/Variable Income/Other), barra horizontal por tipo de investimento. P&L com badges verdes (lucro) ou vermelhos (perda). Botao "Atualizar Cotacao" individual ou "Atualizar Todas" em lote.</p>
+
+    <h4>Banking.tsx</h4>
+    <p>Verifica isPluggyEnabled via <code>GET /api/banking/available</code>. Se habilitado: widget Pluggy Connect para conectar banco, lista de conexoes com status (ACTIVE/ERROR), botao sync por conexao, tabela de transacoes com paginacao (page/limit), botao "Importar Transacoes" que chama POST /api/banking/import e exibe resultado (N receitas, N despesas, N ignoradas, erros). Se nao habilitado: instrucoes de setup.</p>
+
+    <h4>Evolution.tsx</h4>
+    <p>Lista despesas fixas que tem historico mensal. Para cada: grafico de tendencia inline (sparkline), indicador de tendencia (↑ crescente / → estavel / ↓ decrescente) calculado pela funcao getTrend(). Modo comparacao: seleciona ate 4 despesas, compara em line chart Recharts. Metas: botao "Definir Meta" que cria ExpenseGoal. Projecao: media movel ponderada de 6 periodos para estimar valor futuro.</p>
+  </div>
+</section>
+
+<section id="s7">
+  <h2>7. Stores Zustand — Detalhamento</h2>
+  <div class="c">
+    <p>7 stores com detalhamento completo na secao 2. Padrao comum: <code>create&lt;State&gt;()(set =&gt; ({...}))</code>. Todas as actions sao async e chamam a API via Axios. O useFinanceStore e o maior (CRUD para 5 entidades). O useBankingStore gerencia todo o fluxo Open Finance. O useSettingsStore usa zustand/persist para tema no localStorage.</p>
+  </div>
+</section>
+
+<section id="s8">
+  <h2>8. Componentes — Detalhamento</h2>
+  <div class="c">
+    <p>26 componentes documentados na secao 2. Padrao: componentes funcionais React com props tipadas. Estilizacao via Tailwind CSS classes. Nenhum CSS-in-JS. Componentes UI base sao genéricos e reutilizaveis. Landing page usa ScrollReveal com IntersectionObserver para animacoes de entrada.</p>
+  </div>
+</section>
+
+<!-- 9-13: Services, Routes, Controllers, Validators, Middleware detailed in section 2 -->
+<section id="s9"><h2>9. Rotas da API</h2>
+<div class="c"><p>15 arquivos de rota documentados na secao 2. Total de ~60 endpoints. Todos sob prefixo <code>/api</code>. Auth via middleware <code>requireAuth</code> (JWT + sessao BD). Admin via <code>requireAdmin</code>. Rate limiting em auth e chat.</p></div>
+</section>
+
+<section id="s10"><h2>10. Controllers</h2>
+<div class="c"><p>14 controllers documentados na secao 2. Padrao: recebe req/res/next, extrai userId do middleware, delega para service, retorna JSON. Tratamento de erro via try/catch + next(error) para o errorHandler global.</p></div>
+</section>
+
+<section id="s11"><h2>11. Validators Zod</h2>
+<div class="c"><p>6 validators documentados na secao 2. Aplicados via middleware <code>validate(schema)</code> no req.body. Retornam 400 com detalhes do erro Zod.</p></div>
+</section>
+
+<section id="s12"><h2>12. Middleware e Config</h2>
+<div class="c"><p>4 middlewares e 2 configs documentados na secao 2. Destaque: o auth middleware valida JWT, busca sessao no BD (nao expirada), verifica usuario ativo — 3 camadas de seguranca antes de qualquer requisicao protegida.</p></div>
+</section>
+
+<!-- 14. OPEN FINANCE -->
+<section id="s13">
+  <h2>13. Open Finance (Pluggy) — Detalhado</h2>
+  <div class="c">
+    <h3>Fluxo de Conexao</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin:.8rem 0;align-items:center">
+      <span class="bg bg-c">1. Widget Pluggy Connect</span><span style="color:var(--t2)">→</span>
+      <span class="bg bg-p">2. User autoriza no banco</span><span style="color:var(--t2)">→</span>
+      <span class="bg bg-a">3. Callback com itemId</span><span style="color:var(--t2)">→</span>
+      <span class="bg bg-g">4. syncConnection()</span>
+    </div>
+
+    <h3>Endpoints Consumidos</h3>
+    <table>
+      <thead><tr><th>Endpoint</th><th>Metodo</th><th>Uso</th></tr></thead>
+      <tbody>
+        <tr><td><code>/auth</code></td><td>POST</td><td>Gera access token com clientId/clientSecret. Cache de 2 horas.</td></tr>
+        <tr><td><code>/connect_token</code></td><td>POST</td><td>Token para widget Pluggy Connect (frontend).</td></tr>
+        <tr><td><code>/accounts?itemId=X</code></td><td>GET</td><td>Lista contas (corrente, poupanca, cartao de credito) com saldos.</td></tr>
+        <tr><td><code>/transactions?accountId=X&from=&to=</code></td><td>GET</td><td>Transacoes dos ultimos 90 dias com paginacao. Inclui category, operationType, creditCardMetadata (installments).</td></tr>
+        <tr><td><code>/investments?itemId=X</code></td><td>GET</td><td>Portfolio completo com tipo, subtipo, rateType, taxa, valor, lucro. Paginado.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:1rem">Mapeamento de Tipos de Investimento (36+ subtipos)</h3>
+    <div class="g2" style="margin-top:.5rem">
+      <div>
+        <h4>Renda Fixa</h4>
+        <div class="tgr">
+          <span class="tg">Treasury Selic (LFT)</span><span class="tg">Treasury IPCA+ (NTN_B)</span><span class="tg">Treasury Prefixado (LTN/NTN_F)</span><span class="tg">Treasury Renda+ (RENDA+)</span><span class="tg">Treasury Educa+ (EDUCA+)</span><span class="tg">CDB</span><span class="tg">LCI</span><span class="tg">LCA</span><span class="tg">CRI</span><span class="tg">CRA</span><span class="tg">Debentures</span><span class="tg">COE</span><span class="tg">Savings (Poupanca)</span>
+        </div>
+      </div>
+      <div>
+        <h4>Renda Variavel + Outros</h4>
+        <div class="tgr">
+          <span class="tg">Stocks (Acoes)</span><span class="tg">FII</span><span class="tg">ETF</span><span class="tg">BDR</span><span class="tg">Derivatives</span><span class="tg">Cryptocurrency</span><span class="tg">Investment Funds</span><span class="tg">Private Pension</span><span class="tg">Mutual Funds</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 15. PIPELINE -->
+<section id="s14">
+  <h2>14. Pipeline de Importacao — Detalhado</h2>
+  <div class="c">
+    <h3>Fluxo Completo (6 etapas)</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin:.8rem 0;align-items:center">
+      <span class="bg bg-r">1. Skip</span><span style="color:var(--t2)">→</span>
+      <span class="bg bg-c">2. Limpar desc</span><span style="color:var(--t2)">→</span>
+      <span class="bg bg-p">3. Classificar</span><span style="color:var(--t2)">→</span>
+      <span class="bg bg-a">4. Pagamento</span><span style="color:var(--t2)">→</span>
+      <span class="bg bg-pk">5. Categoria</span><span style="color:var(--t2)">→</span>
+      <span class="bg bg-g">6. Criar registro</span>
+    </div>
+
+    <h4>Etapa 1: Filtros de Skip (3 camadas)</h4>
+    <table>
+      <thead><tr><th>Camada</th><th>Fonte</th><th>Filtros</th></tr></thead>
+      <tbody>
+        <tr><td><span class="bg bg-r">Categoria Pluggy</span></td><td>Classificacao Open Finance</td><td>"Same person transfer", "Credit card payment", "Automatic investment"</td></tr>
+        <tr><td><span class="bg bg-a">OperationType</span></td><td>Tipo bancario</td><td>RENDIMENTO_APLIC_FINANCEIRA, RESGATE_APLIC_FINANCEIRA, TRANSFERENCIA_MESMA_INSTITUICAO</td></tr>
+        <tr><td><span class="bg bg-p">Regex (fallback)</span></td><td>Descricao</td><td>13 padroes: CDB, RDB, LCI, LCA, Tesouro, aplicacao financeira, fundo de investimento, poupanca, mesma titularidade, entre contas, etc.</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Etapa 2: Limpeza de Descricao</h4>
+    <table>
+      <thead><tr><th>Original</th><th>Resultado</th><th>Regra</th></tr></thead>
+      <tbody>
+        <tr><td><code>Pix enviado para Claro</code></td><td>Claro</td><td>Remove "Pix enviado para"</td></tr>
+        <tr><td><code>Pix recebido de Nome</code></td><td>Nome</td><td>Remove "Pix recebido de"</td></tr>
+        <tr><td><code>DL*GOOGLE YOUTUB</code></td><td>GOOGLE YOUTUB</td><td>Remove processador antes de *</td></tr>
+        <tr><td><code>UBER * PENDING</code></td><td>UBER</td><td>Fallback: se apos * e generico, usa antes</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Etapa 3-4: Classificacao e Pagamento</h4>
+    <ul>
+      <li>Transacao CREDIT → Income | DEBIT → Expense</li>
+      <li>Recorrencia: descricao normalizada em 2+ meses distintos com valores ±20% → FIXED, senao VARIABLE</li>
+      <li>Pagamento: PIX (operationType), CREDIT (conta tipo CREDIT ou nome com Visa/Master/Cartao), DEBIT (resto)</li>
+      <li>Parcelas: metadados preservados para badge na UI (1/2, 3/6). Cada parcela = 1 transacao real do banco</li>
+    </ul>
+
+    <h4>Etapa 5: Mapeamento de 27 Categorias (Pluggy → App)</h4>
+    <div class="tgr">
+      <span class="tg">eating out → Food</span><span class="tg">groceries → Food</span><span class="tg">food delivery → Food</span><span class="tg">bakery → Food</span>
+      <span class="tg">taxi/ride-hailing → Transport</span><span class="tg">gas → Transport</span><span class="tg">public transportation → Transport</span><span class="tg">parking → Transport</span><span class="tg">toll → Transport</span>
+      <span class="tg">pharmacy → Health</span><span class="tg">health → Health</span><span class="tg">medical → Health</span>
+      <span class="tg">school → Education</span><span class="tg">bookstore → Education</span><span class="tg">education → Education</span>
+      <span class="tg">tickets → Entertainment</span><span class="tg">entertainment → Entertainment</span><span class="tg">sports goods → Entertainment</span><span class="tg">travel → Entertainment</span>
+      <span class="tg">housing → Housing</span><span class="tg">houseware → Housing</span><span class="tg">internet → Housing</span>
+      <span class="tg">digital services → Services</span><span class="tg">services → Services</span><span class="tg">insurance → Services</span>
+      <span class="tg">shopping → Personal</span><span class="tg">online shopping → Personal</span><span class="tg">electronics → Personal</span>
+    </div>
+  </div>
+</section>
+
+<!-- 16. IA -->
+<section id="s15">
+  <h2>15. Inteligencia Artificial</h2>
+  <div class="c">
+    <h3>Adapter Pattern Multi-Provider</h3>
+    <p>O <code>ai.service.ts</code> implementa um adapter pattern que permite trocar entre provedores de IA. Atualmente Google Gemini esta implementado e configurado. O SDK Anthropic esta instalado como dependencia para uso futuro.</p>
+
+    <h4>Auto-deteccao de Modelo Gemini</h4>
+    <p><code>detectGeminiModel(apiKey)</code> busca <code>GET /v1beta/models?key={apiKey}</code>, filtra modelos que suportam <code>generateContent</code>, exclui especializados (TTS, imagem, robotics, nano, gemma, embedding, deep-research), e retorna o primeiro match da lista de preferencia:</p>
+    <div class="tgr" style="margin:.5rem 0">
+      <span class="tg">1. gemini-3-flash</span><span class="tg">2. gemini-3-pro</span><span class="tg">3. gemini-2.5-flash</span><span class="tg">4. gemini-2.5-pro</span><span class="tg">5. gemini-2.0-flash</span><span class="tg">6. gemini-1.5-flash</span><span class="tg">7. gemini-1.5-pro</span>
+    </div>
+    <p>Cache de 5 minutos. Google Gemini usa <code>?key=</code> no query param (NAO Bearer token).</p>
+
+    <h4>System Prompt Dinamico</h4>
+    <p>O <code>promptBuilder.service</code> monta prompt em PT-BR com: receitas, despesas fixas + historico, despesas variaveis do mes, totais, investimentos com P&L, taxas BCB, contas bancarias, 30 ultimas transacoes, e analise de tendencia (gastos crescentes, items acima do limite).</p>
+
+    <h4>Tratamento de Erros</h4>
+    <ul>
+      <li><strong>400:</strong> Retry sem systemInstruction (modelos antigos)</li>
+      <li><strong>429:</strong> Rate limit — mensagem amigavel</li>
+      <li><strong>403:</strong> Acesso negado — verificar billing</li>
+      <li><strong>Safety block:</strong> Mensagem sobre bloqueio de seguranca</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 17. JOBS -->
+<section id="s16">
+  <h2>16. Jobs em Background (5 agendamentos)</h2>
+  <div class="c">
+    <table>
+      <thead><tr><th>Job</th><th>Schedule (cron)</th><th>Funcao</th><th>Detalhes</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Pluggy Sync</strong></td><td>06:00 UTC diario</td><td><code>syncAllConnections()</code></td><td>Sincroniza contas, transacoes (90 dias) e investimentos de todas as conexoes ACTIVE. Define status ERROR em caso de falha.</td></tr>
+        <tr><td><strong>BCB Rates</strong></td><td>08:00 UTC diario</td><td><code>fetchAndStoreRates()</code></td><td>Busca SELIC, CDI, IPCA, Poupanca, TR, IGPM, Dolar na API oficial do Banco Central. Upsert na tabela EconomicRate.</td></tr>
+        <tr><td><strong>Portfolio Prices</strong></td><td>21:30 UTC dias uteis</td><td><code>updatePortfolioPrices()</code></td><td>Atualiza cotacoes de ativos que tem investimentos via Alpha Vantage. Quota de 25 req/dia.</td></tr>
+        <tr><td><strong>Snapshots</strong></td><td>1o do mes 00:30 UTC</td><td><code>createMonthlySnapshots()</code></td><td>Para cada investimento ACTIVE, calcula valor e cria InvestmentSnapshot do mes anterior.</td></tr>
+        <tr><td><strong>Cleanup</strong></td><td>Domingo 03:00 UTC</td><td>Inline</td><td>Remove sessoes expiradas e metricas com >90 dias.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 18. UTILS -->
+<section id="s17">
+  <h2>17. Utilitarios e Hooks do Frontend</h2>
+  <div class="c">
+    <table>
+      <thead><tr><th>Arquivo</th><th>Funcoes</th><th>Como foi construido</th></tr></thead>
+      <tbody>
+        <tr><td><strong>format.ts</strong></td><td><code>formatCurrency(n)</code> → "R$ 1.234,56"<br><code>formatPercent(n, dec)</code> → "+12.5%"<br><code>formatDate(str)</code> → "15/02/2026"<br><code>formatMonthYear(str)</code> → "Feb/2026"<br><code>formatMonthYearPtBR(str)</code> → "Fevereiro 2026"<br><code>getCurrentMonth()</code> → "2026-02"<br><code>getPreviousMonths(n, from?)</code> → array<br><code>getMonthFromDate(str)</code> → "2026-02"<br><code>navigateMonth(str, dir)</code> → mes +/-1<br><code>generateId()</code> → ID<br><code>clamp(val, min, max)</code></td><td>formatDate aceita ISO ("2026-02-15T00:00:00.000Z") e YYYY-MM-DD, extrai parte antes de T. Locale pt-BR para formatacao monetaria e datas.</td></tr>
+        <tr><td><strong>calculations.ts</strong></td><td><code>getAverage(nums)</code><br><code>getVariationPercent(old, new)</code><br><code>getTrend(values)</code> → "increasing"|"stable"|"decreasing"<br><code>getWeightedMovingAverage(values, period=6)</code><br><code>simulateInvestment(initial, monthly, rate, months, type)</code></td><td>getTrend analisa os 3 ultimos valores: se 2 crescentes → increasing, 2 decrescentes → decreasing, senao stable. Simulacao suporta juros simples e compostos.</td></tr>
+        <tr><td><strong>cpf.ts</strong></td><td><code>validateCPF(cpf)</code> — digitos verificadores<br><code>maskCPF(cpf)</code> → "000.000.000-00"<br><code>cleanCPF(cpf)</code></td><td>Validacao real dos 2 digitos verificadores do CPF (algoritmo modulo 11). Mascara e limpeza para display/envio.</td></tr>
+        <tr><td><strong>viacep.ts</strong></td><td><code>fetchAddress(cep)</code> → endereco</td><td>Chama <code>https://viacep.com.br/ws/{cep}/json/</code>. Retorna logradouro, bairro, localidade, uf. Usado no registro etapa 3.</td></tr>
+        <tr><td><strong>chartHelpers.ts</strong></td><td><code>currencyFormatter</code></td><td>Formatador para tooltips de graficos Recharts.</td></tr>
+        <tr><td><strong>usePublicRates.ts</strong></td><td>Hook: <code>usePublicRates()</code></td><td>Busca GET /api/rates/public (sem auth). Retorna {rates, isLoading, error}. Usado na CredibilityBar da landing.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 19. SEED -->
+<section id="s18">
+  <h2>18. Seed do Banco de Dados</h2>
+  <div class="c">
+    <p>O arquivo <code>prisma/seed.ts</code> popula o banco com dados iniciais para desenvolvimento e demonstracao:</p>
+    <h4>Usuarios</h4>
+    <ul>
+      <li><strong>Admin:</strong> admin@financaapp.com (role ADMIN) — acesso ao painel administrativo</li>
+      <li><strong>Demo:</strong> demo@financaapp.com (role USER) — usuario com dados de exemplo completos</li>
+    </ul>
+    <h4>Categorias Default (10)</h4>
+    <div class="tgr">
+      <span class="tg">Housing</span><span class="tg">Food</span><span class="tg">Transport</span><span class="tg">Health</span><span class="tg">Education</span><span class="tg">Entertainment</span><span class="tg">Clothing</span><span class="tg">Services</span><span class="tg">Personal</span><span class="tg">Other</span>
+    </div>
+    <h4>Tipos de Investimento (21)</h4>
+    <p>Treasury Selic, Treasury IPCA+, Treasury Prefixado, Treasury Renda+, Treasury Educa+, CDB, LCI, LCA, CRI, CRA, Debentures, COE, Acoes, FII, ETF, BDR, Crypto, Investment Funds, Private Pension, Mutual Funds, Savings.</p>
+    <h4>Ativos (30 com 6 meses de precos)</h4>
+    <p>Acoes: PETR4, VALE3, ITUB4, BBDC4, WEGE3, etc. FIIs: HGLG11, KNRI11. ETFs: BOVA11, IVVB11. BDRs: AAPL34, AMZO34. Crypto: BTC, ETH. Cada ativo com historico de precos de 6 meses.</p>
+    <h4>Dados Demo</h4>
+    <ul>
+      <li>1 receita: salario mensal</li>
+      <li>5 despesas fixas (aluguel, seguro, internet, academia, streaming)</li>
+      <li>4 despesas variaveis com historico de 6 meses (luz, agua, gas, celular)</li>
+      <li>4 despesas variaveis pontuais (mercado, Uber, restaurante, farmacia)</li>
+      <li>3 investimentos renda variavel (acoes PETR4, FII HGLG11, crypto BTC)</li>
+      <li>2 investimentos renda fixa (Tesouro Selic 2029, CDB 120% CDI)</li>
+    </ul>
+    <h4>Taxas Economicas</h4>
+    <p>SELIC, CDI, IPCA, Poupanca, TR, IGPM, Dolar com valores reais iniciais.</p>
+  </div>
+</section>
+
+<!-- 20. TESTE -->
+<section id="s19">
+  <h2>19. Teste Realizado</h2>
+  <div class="c">
+    <p>A plataforma foi testada com uma conexao real via Open Finance com o <strong>banco XP</strong>. O teste validou todo o pipeline end-to-end:</p>
+    <ul>
+      <li><span class="sd"></span>Conexao via widget Pluggy Connect com autorizacao real no banco</li>
+      <li><span class="sd"></span>Sincronizacao de contas — corrente (tipo BANK) e cartao de credito (tipo CREDIT)</li>
+      <li><span class="sd"></span>Importacao de transacoes com classificacao automatica de receitas e despesas</li>
+      <li><span class="sd"></span>Deteccao de metodo de pagamento — Credito (conta "Cartao XP Visa Infinite"), Debito (conta "XP"), PIX (operationType)</li>
+      <li><span class="sd"></span>Classificacao fixa/variavel por algoritmo de recorrencia (2+ meses ±20%)</li>
+      <li><span class="sd"></span>Mapeamento de 27 categorias Pluggy (ingles) para categorias do app</li>
+      <li><span class="sd"></span>Limpeza de descricoes — prefixos PIX, codigos de processador (*)</li>
+      <li><span class="sd"></span>Filtragem de transferencias internas, pagamentos de cartao e investimentos</li>
+      <li><span class="sd"></span>Importacao de investimentos via endpoint /investments com mapeamento completo de tipo e rendimento</li>
+      <li><span class="sd"></span>Metadados de parcelas preservados sem duplicacao (1:1 com transacao real)</li>
+      <li><span class="sd"></span>Navegacao por mes com dados filtrados corretamente por periodo</li>
+      <li><span class="sd"></span>Reimportacao idempotente — 0 novos registros na segunda execucao</li>
+    </ul>
+    <p style="margin-top:.75rem">A integracao e <strong>generica</strong> — trabalha com dados brutos do Open Finance e nao depende de nenhum banco especifico.</p>
+  </div>
+</section>
+
+<!-- 21. MELHORIAS -->
+<section id="s20">
+  <h2>20. Melhorias Recentes</h2>
+  <div class="c" style="overflow-x:auto">
+    <table>
+      <thead><tr><th>Melhoria</th><th>Arquivo(s)</th><th>Detalhe Tecnico</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Investimentos via /investments</strong></td><td>pluggy.service.ts, schema.prisma</td><td>Dados reais de investimento direto do Pluggy (tipo, subtipo, rateType, taxa, lucro) em vez de inferencia por regex. Campos: pluggyInvestmentId, amountProfit, lastMonthRate, annualRate. Upsert para deduplicacao.</td></tr>
+        <tr><td><strong>Remocao do installment spreading</strong></td><td>transactionImport.service.ts</td><td>Cada expense corresponde 1:1 a transacao real. Parcelas futuras nao sao mais criadas artificialmente — importadas quando chegam como novas transacoes.</td></tr>
+        <tr><td><strong>Deteccao de pagamento por conta</strong></td><td>transactionImport.service.ts</td><td>detectPaymentMethod recebe accountName. Conta tipo "CREDIT" ou nome com Visa/Master/Cartao → Credito. Corrigido: Pluggy envia "CREDIT" e nao "CREDIT_CARD".</td></tr>
+        <tr><td><strong>Limpeza de descricoes</strong></td><td>transactionImport.service.ts</td><td>cleanDescription: remove 4 prefixos (Pix enviado/recebido, Pagamento, TED) e codigos de processador antes de * com fallback inteligente.</td></tr>
+        <tr><td><strong>Categorias em ingles (Pluggy)</strong></td><td>transactionImport.service.ts</td><td>CATEGORY_MAP reescrito com 27 mapeamentos usando categorias Pluggy em ingles.</td></tr>
+        <tr><td><strong>Skip por categoria Pluggy</strong></td><td>transactionImport.service.ts</td><td>Classificacao Open Finance como fonte primaria de skip. Regex como fallback.</td></tr>
+        <tr><td><strong>Navegacao por mes</strong></td><td>Expenses.tsx</td><td>useState + seletor visual. Todas as abas filtram por mes. Stat cards reativos.</td></tr>
+        <tr><td><strong>Filtro de despesas fixas por mes</strong></td><td>Expenses.tsx, dashboard.service.ts</td><td>Importadas: filtradas pela data real. Manuais: aparecem em todos os meses.</td></tr>
+        <tr><td><strong>Correcao do formatDate</strong></td><td>format.ts</td><td>Parseia ISO e YYYY-MM-DD extraindo parte antes do T. Antes criava datas invalidas.</td></tr>
+        <tr><td><strong>Interface pt-BR com pagamento</strong></td><td>Expenses.tsx</td><td>Colunas traduzidas. Badges: Mensal/Unica, Pago/Pendente, Credito/Debito/PIX. Coluna Pagamento em todas as abas.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 22. PROXIMOS PASSOS -->
+<section id="s21">
+  <h2>21. Proximos Passos</h2>
+  <div class="c">
+    <h3>Curto Prazo (Funcionalidades Prioritarias)</h3>
+
+    <div class="next">
+      <h4>Dashboard: Grafico com separacao Fixo vs Variavel</h4>
+      <p>Atualmente o grafico de barras mostra "Despesas" como uma unica barra. Deve ser dividido em 2 segmentos empilhados: Fixo (vermelho) e Variavel (amarelo), para o usuario visualizar que gastos fixos sao constantes enquanto variaveis flutuam.</p>
+    </div>
+
+    <div class="next">
+      <h4>Notificacoes em Tempo Real</h4>
+      <p>Implementar sistema de notificacoes usando os alertas ja configurados no UserSettings (alertExpenseAbove, alertInvestmentDrop, alertBillDue). Quando uma despesa ultrapassa o limite do ExpenseGoal, ou uma conta vence, notificar o usuario na UI.</p>
+    </div>
+
+    <div class="next">
+      <h4>Export de Dados Completo</h4>
+      <p>A pagina de Settings tem secao "Dados e Privacidade" com botoes de export/import. Implementar export JSON/CSV de todos os dados do usuario (receitas, despesas, investimentos, configuracoes) e import para restauracao.</p>
+    </div>
+
+    <div class="next">
+      <h4>Verificacao de Email</h4>
+      <p>O campo <code>emailVerified</code> no User ja existe mas ainda nao e utilizado. Implementar envio de email de verificacao no registro e fluxo de confirmacao.</p>
+    </div>
+
+    <h3 style="margin-top:1.5rem">Medio Prazo (Melhorias de Qualidade)</h3>
+
+    <div class="next">
+      <h4>Multi-Provider IA Completo</h4>
+      <p>O adapter pattern esta pronto para OpenAI, Anthropic, e Cohere. Falta implementar os adapters especificos. Atualmente so Google Gemini funciona. O SDK Anthropic ja esta instalado como dependencia.</p>
+    </div>
+
+    <div class="next">
+      <h4>Testes Automatizados</h4>
+      <p>Jest 30 e ts-jest estao configurados no server/package.json. Criar testes unitarios para services (yieldCalculator, transactionImport, mapCategory) e testes de integracao para as rotas da API.</p>
+    </div>
+
+    <div class="next">
+      <h4>Alpha Vantage: Cotacoes em Tempo Real</h4>
+      <p>O marketData.service esta pronto com cache e quota. Integrar com a UI de Investimentos para atualizar cotacoes automaticamente e exibir variacao diaria.</p>
+    </div>
+
+    <div class="next">
+      <h4>Tema Light Mode</h4>
+      <p>O toggle dark/light existe no useSettingsStore e a classe CSS e aplicada no &lt;html&gt;. Falta estilizar todos os componentes com variantes light (atualmente otimizado para dark mode).</p>
+    </div>
+
+    <h3 style="margin-top:1.5rem">Longo Prazo (Expansao)</h3>
+
+    <div class="next">
+      <h4>Multi-Banco com Comparacao</h4>
+      <p>O modelo BankConnection ja suporta multiplas conexoes por usuario. Implementar comparacao entre contas de diferentes bancos, consolidacao de saldos e visao unificada.</p>
+    </div>
+
+    <div class="next">
+      <h4>Orcamento Mensal</h4>
+      <p>Criar modelo Budget com limite por categoria por mes. Dashboard mostra progresso de cada categoria vs limite definido. Alertas quando se aproxima do limite.</p>
+    </div>
+
+    <div class="next">
+      <h4>Mobile (PWA ou React Native)</h4>
+      <p>O frontend e responsivo mas otimizado para desktop. Pode ser convertido para PWA (service worker + manifest) ou portado para React Native reutilizando stores e logica.</p>
+    </div>
+
+    <div class="next">
+      <h4>Deploy em Producao</h4>
+      <p>Configurar CI/CD, containerizar client+server com Docker multi-stage, configurar PostgreSQL gerenciado, HTTPS, variáveis de ambiente de produção, monitoring.</p>
+    </div>
+  </div>
+</section>
+
+<footer style="text-align:center;padding:2rem;color:var(--t2);font-size:.85rem;border-top:1px solid var(--b);margin-top:2rem">
+  Financial Helper — Relatorio tecnico completo gerado em 15/02/2026 com auxilio de Claude<br>
+  <span style="font-size:.75rem;opacity:.7">22 secoes | 110+ arquivos documentados | 21 modelos | 11 enums | 6 migrations | 60+ endpoints | 0 dados pessoais</span>
+</footer>
+
+</div>
+</body>
+</html>

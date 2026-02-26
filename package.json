@@ -9,7 +9,7 @@
     "dev:client": "cd client && npm run dev",
     "dev:server": "cd server && npm run dev",
     "build": "cd client && npm install --include=dev && npm run build && cd ../server && npm install --include=dev && npx prisma generate && npm run build",
-    "start": "cd server && npx prisma migrate deploy && npm start",
+    "start": "cd server && npx prisma migrate deploy && npx prisma db seed && npm start",
     "install:all": "cd client && npm install && cd ../server && npm install",
     "db:migrate": "cd server && npx prisma migrate dev",
     "db:seed": "cd server && npx prisma db seed",

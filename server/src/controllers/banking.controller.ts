@@ -20,14 +20,40 @@ export async function createConnectToken(req: Request, res: Response, next: Next
 export async function listConnections(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = (req as any).userId;
-    const connections = await prisma.bankConnection.findMany({
+    const connections = await prisma.pluggyItem.findMany({
       where: { userId },
       include: {
-        accounts: { select: { id: true, name: true, type: true, balance: true } },
+        accounts: {
+          include: {
+            stdAccount: {
+              select: { id: true, accountLabel: true, sourceType: true, currentBalance: true },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
-    res.json(connections);
+
+    // Map to frontend-friendly shape
+    const mapped = connections.map(conn => ({
+      id: conn.id,
+      pluggyItemId: conn.pluggyItemId,
+      connectorName: conn.connectorName,
+      status: conn.status,
+      lastSyncAt: conn.lastSyncedAt,
+      createdAt: conn.createdAt,
+      accounts: conn.accounts
+        .filter(a => a.stdAccount)
+        .map(a => ({
+          id: a.stdAccount!.id,
+          name: a.stdAccount!.accountLabel,
+          type: a.type,
+          sourceType: a.stdAccount!.sourceType,
+          balance: a.stdAccount!.currentBalance,
+        })),
+    }));
+
+    res.json(mapped);
   } catch (err) {
     next(err);
   }
@@ -38,7 +64,7 @@ export async function createConnection(req: Request, res: Response, next: NextFu
     const userId = (req as any).userId;
     const { pluggyItemId, connectorName } = req.body;
 
-    const connection = await prisma.bankConnection.create({
+    const connection = await prisma.pluggyItem.create({
       data: { userId, pluggyItemId, connectorName },
     });
 
@@ -49,9 +75,17 @@ export async function createConnection(req: Request, res: Response, next: NextFu
       // Sync failure is not fatal
     }
 
-    const full = await prisma.bankConnection.findUnique({
+    const full = await prisma.pluggyItem.findUnique({
       where: { id: connection.id },
-      include: { accounts: true },
+      include: {
+        accounts: {
+          include: {
+            stdAccount: {
+              select: { id: true, accountLabel: true, sourceType: true, currentBalance: true },
+            },
+          },
+        },
+      },
     });
 
     res.status(201).json(full);
@@ -65,13 +99,13 @@ export async function deleteConnection(req: Request, res: Response, next: NextFu
     const userId = (req as any).userId;
     const id = req.params.id as string;
 
-    const conn = await prisma.bankConnection.findFirst({ where: { id, userId } });
+    const conn = await prisma.pluggyItem.findFirst({ where: { id, userId } });
     if (!conn) {
       res.status(404).json({ error: 'Connection not found' });
       return;
     }
 
-    await prisma.bankConnection.delete({ where: { id } });
+    await prisma.pluggyItem.delete({ where: { id } });
     res.json({ message: 'Connection deleted' });
   } catch (err) {
     next(err);
@@ -83,7 +117,7 @@ export async function syncConnection(req: Request, res: Response, next: NextFunc
     const userId = (req as any).userId;
     const id = req.params.id as string;
 
-    const conn = await prisma.bankConnection.findFirst({ where: { id, userId } });
+    const conn = await prisma.pluggyItem.findFirst({ where: { id, userId } });
     if (!conn) {
       res.status(404).json({ error: 'Connection not found' });
       return;
@@ -99,11 +133,31 @@ export async function syncConnection(req: Request, res: Response, next: NextFunc
 export async function listAccounts(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = (req as any).userId;
-    const accounts = await prisma.bankAccount.findMany({
-      where: { bankConnection: { userId } },
-      include: { bankConnection: { select: { connectorName: true } } },
+    const accounts = await prisma.stdAccount.findMany({
+      where: { userId },
+      include: {
+        pluggyAccount: {
+          include: {
+            pluggyItem: { select: { connectorName: true } },
+          },
+        },
+      },
     });
-    res.json(accounts);
+
+    const mapped = accounts.map(a => ({
+      id: a.id,
+      name: a.accountLabel,
+      type: a.pluggyAccount.type,
+      sourceType: a.sourceType,
+      balance: a.currentBalance,
+      currencyCode: a.currencyCode,
+      bankName: a.bankName,
+      connectorName: a.pluggyAccount.pluggyItem.connectorName,
+      isActive: a.isActive,
+      isPrimary: a.isPrimary,
+    }));
+
+    res.json(mapped);
   } catch (err) {
     next(err);
   }
@@ -116,26 +170,46 @@ export async function listTransactions(req: Request, res: Response, next: NextFu
     const limit = parseInt((req.query.limit as string) || '50');
     const skip = (page - 1) * limit;
 
-    const where = {
-      bankAccount: { bankConnection: { userId } },
-    } as const;
+    const where = { userId } as const;
 
     const [transactions, total] = await Promise.all([
-      prisma.bankTransaction.findMany({
+      prisma.stdTransaction.findMany({
         where,
         orderBy: { date: 'desc' },
         skip,
         take: limit,
         include: {
-          bankAccount: {
-            select: { name: true, bankConnection: { select: { connectorName: true } } },
+          stdAccount: {
+            select: { accountLabel: true, bankName: true, sourceType: true },
           },
         },
       }),
-      prisma.bankTransaction.count({ where }),
+      prisma.stdTransaction.count({ where }),
     ]);
 
-    res.json({ transactions, total, page, pages: Math.ceil(total / limit) });
+    const mapped = transactions.map(tx => ({
+      id: tx.id,
+      description: tx.descriptionClean,
+      descriptionOriginal: tx.descriptionOriginal,
+      direction: tx.direction,
+      amount: tx.absoluteAmount,
+      date: tx.date,
+      paymentMethod: tx.paymentMethod,
+      counterpartName: tx.counterpartName,
+      isInternalTransfer: tx.isInternalTransfer,
+      isInvoicePayment: tx.isInvoicePayment,
+      isRefund: tx.isRefund,
+      imported: tx.imported,
+      installmentNumber: tx.installmentNumber,
+      totalInstallments: tx.totalInstallments,
+      stdAccount: {
+        accountLabel: tx.stdAccount.accountLabel,
+        bankName: tx.stdAccount.bankName,
+        sourceType: tx.stdAccount.sourceType,
+      },
+    }));
+
+    res.json({ transactions: mapped, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
     next(err);
   }

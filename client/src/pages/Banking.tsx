@@ -68,9 +68,6 @@ export default function Banking() {
     try {
       const result = await syncConnection(id);
       const parts: string[] = [];
-      if (result.investments.synced > 0) {
-        parts.push(t('banking.syncedInvestments', { count: result.investments.synced }));
-      }
       if (result.transactions.newCount > 0) {
         parts.push(t('banking.syncedNewTransactions', { count: result.transactions.newCount }));
       }
@@ -287,21 +284,21 @@ export default function Banking() {
                 <div key={tx.id}
                   className="flex items-center justify-between py-2 border-b border-surface-100 dark:border-surface-700/50 last:border-0">
                   <div className="flex items-center gap-3">
-                    {tx.type === 'CREDIT'
+                    {tx.direction === 'CREDIT'
                       ? <ArrowDownLeft className="h-4 w-4 text-green-500" />
                       : <ArrowUpRight className="h-4 w-4 text-red-500" />}
                     <div>
                       <p className="text-sm font-medium">{tx.description}</p>
                       <p className="text-xs text-surface-400">
-                        {tx.bankAccount.bankConnection.connectorName} · {tx.bankAccount.name}
-                        {tx.category && ` · ${tx.category}`}
+                        {tx.stdAccount.bankName} · {tx.stdAccount.accountLabel}
+                        {tx.counterpartName && ` · ${tx.counterpartName}`}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-sm font-medium ${tx.type === 'CREDIT' ? 'text-green-500' : 'text-red-500'}`}>
-                      {tx.type === 'CREDIT' ? '+' : '-'}
-                      {formatCurrency(Math.abs(tx.amount))}
+                    <p className={`text-sm font-medium ${tx.direction === 'CREDIT' ? 'text-green-500' : 'text-red-500'}`}>
+                      {tx.direction === 'CREDIT' ? '+' : '-'}
+                      {formatCurrency(tx.amount)}
                     </p>
                     <p className="text-xs text-surface-400">
                       {formatDate(tx.date)}

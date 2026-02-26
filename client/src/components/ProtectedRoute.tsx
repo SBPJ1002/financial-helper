@@ -1,8 +1,9 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/useAuthStore';
 
 export default function ProtectedRoute() {
   const { user, isInitialized } = useAuthStore();
+  const { pathname } = useLocation();
 
   if (!isInitialized) {
     return (
@@ -14,6 +15,10 @@ export default function ProtectedRoute() {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (!user.onboardingCompleted && pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
   }
 
   return <Outlet />;

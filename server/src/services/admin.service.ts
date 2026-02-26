@@ -17,7 +17,6 @@ export async function listUsers(page = 1, limit = 20) {
           select: {
             incomes: true,
             expenses: true,
-            investments: true,
             chatMessages: true,
           },
         },
@@ -44,13 +43,12 @@ export async function updateUser(id: string, data: { isActive?: boolean; role?: 
 }
 
 export async function getMetrics() {
-  const [totalUsers, activeUsers, totalIncomes, totalExpenses, totalInvestments, totalMessages] =
+  const [totalUsers, activeUsers, totalIncomes, totalExpenses, totalMessages] =
     await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { isActive: true } }),
       prisma.income.count(),
       prisma.expense.count(),
-      prisma.investment.count(),
       prisma.chatMessage.count(),
     ]);
 
@@ -74,7 +72,6 @@ export async function getMetrics() {
     data: {
       incomes: totalIncomes,
       expenses: totalExpenses,
-      investments: totalInvestments,
       chatMessages: totalMessages,
     },
     activity: {

@@ -4,10 +4,6 @@ import api from '../services/api';
 export interface UserSettings {
   id: string;
   userId: string;
-  aiProvider: string;
-  aiApiKey: string | null;
-  hasAiApiKey: boolean;
-  aiModel: string;
   theme: string;
   accentColor: string;
   language: string;
@@ -18,7 +14,6 @@ export interface UserSettings {
   alertExpenseAbove: boolean;
   alertInvestmentDrop: boolean;
   alertBillDue: boolean;
-  aiIncludeInvestments: boolean;
   aiIncludeExpenses: boolean;
 }
 
@@ -27,10 +22,9 @@ interface UserSettingsState {
   isLoading: boolean;
   fetchSettings: () => Promise<void>;
   updateSettings: (data: Partial<UserSettings>) => Promise<void>;
-  testAiConnection: (provider: string, apiKey: string, model: string) => Promise<{ success: boolean; model?: string }>;
 }
 
-export const useUserSettingsStore = create<UserSettingsState>()((set, _get) => ({
+export const useUserSettingsStore = create<UserSettingsState>()((set) => ({
   settings: null,
   isLoading: false,
 
@@ -49,10 +43,5 @@ export const useUserSettingsStore = create<UserSettingsState>()((set, _get) => (
   updateSettings: async (data) => {
     const { data: updated } = await api.put('/settings', data);
     set({ settings: updated });
-  },
-
-  testAiConnection: async (provider, apiKey, model) => {
-    const { data } = await api.post('/settings/ai/test', { provider, apiKey, model });
-    return { success: data.success, model: data.model };
   },
 }));

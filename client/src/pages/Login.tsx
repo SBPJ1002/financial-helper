@@ -77,11 +77,6 @@ export default function Login() {
           </p>
         </Card>
 
-        <div className="mt-4 text-center">
-          <p className="text-xs text-surface-400">
-            {t('auth.demo')}
-          </p>
-        </div>
       </div>
     </div>
   );

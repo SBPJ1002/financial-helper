@@ -1,9 +1,6 @@
 import cron from 'node-cron';
-import { fetchAndStoreRates } from '../services/bcb.service.js';
-import { createMonthlySnapshots } from './snapshotCreator.job.js';
 import { syncAllConnections } from '../services/pluggy.service.js';
 import { isPluggyEnabled } from '../services/pluggy.service.js';
-import { isAlphaVantageEnabled, updatePortfolioPrices } from '../services/marketData.service.js';
 import { generateNotifications } from '../services/notification.service.js';
 import { prisma } from '../config/prisma.js';
 
@@ -18,38 +15,6 @@ export function startAllJobs() {
     }
   });
   console.log('Pluggy sync cron job scheduled (daily at 06:00 UTC)');
-
-  // Daily at 08:00 — BCB rates
-  cron.schedule('0 8 * * *', async () => {
-    try {
-      await fetchAndStoreRates();
-    } catch (err) {
-      console.error('Rate fetcher job error:', err);
-    }
-  });
-  console.log('Rate fetcher cron job scheduled (daily at 08:00)');
-
-  // Weekdays at 21:30 UTC — Stock prices (if Alpha Vantage configured)
-  cron.schedule('30 21 * * 1-5', async () => {
-    if (!isAlphaVantageEnabled()) return;
-    try {
-      const result = await updatePortfolioPrices();
-      console.log(`Updated ${result.updated} portfolio prices`);
-    } catch (err) {
-      console.error('Stock price update job error:', err);
-    }
-  });
-  console.log('Stock price update cron job scheduled (weekdays at 21:30 UTC)');
-
-  // Monthly on the 1st at 00:30 — Investment snapshots
-  cron.schedule('30 0 1 * *', async () => {
-    try {
-      await createMonthlySnapshots();
-    } catch (err) {
-      console.error('Snapshot creator job error:', err);
-    }
-  });
-  console.log('Snapshot creator cron job scheduled (1st of every month at 00:30)');
 
   // Daily at 07:00 — Notifications
   cron.schedule('0 7 * * *', async () => {

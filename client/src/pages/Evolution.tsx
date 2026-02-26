@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, Target, Plus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, Target, Plus, Trash2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useToast } from '../components/ui/Toast';
 import { useFinanceStore } from '../stores/useFinanceStore';
 import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/format';
@@ -21,9 +22,10 @@ interface HistoryEntry {
   amount: number;
 }
 
-interface TrackedExpense {
-  id: string;
+interface GroupedExpense {
+  key: string;
   description: string;
+  expenseIds: string[];
   amount: number;
   history: HistoryEntry[];
   goal: { id: string; limit: number } | null;
@@ -31,31 +33,74 @@ interface TrackedExpense {
 
 export default function Evolution() {
   const { t } = useTranslation();
-  const { expenses, fixedExpenses, fetchExpenses, addExpenseHistory, setExpenseGoal } = useFinanceStore();
+  const { expenses, fixedExpenses, fetchExpenses, addExpenseHistory, setExpenseGoal, deleteExpense } = useFinanceStore();
   const { toast } = useToast();
 
   useEffect(() => {
     fetchExpenses();
   }, [fetchExpenses]);
 
-  const tracked = useMemo(
-    () => fixedExpenses().filter(e => e.history.length > 0) as TrackedExpense[],
-    [expenses],  // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const tracked = useMemo(() => {
+    const fixed = fixedExpenses();
+    const groups = new Map<string, GroupedExpense>();
 
-  const [selectedExpense, setSelectedExpense] = useState<TrackedExpense | null>(null);
+    for (const exp of fixed) {
+      const key = exp.description.trim().toLowerCase();
+      const existing = groups.get(key);
+
+      if (existing) {
+        existing.expenseIds.push(exp.id);
+        existing.amount = exp.amount;
+        if (!existing.goal && exp.goal) existing.goal = exp.goal;
+
+        // Merge histories by month (keep first seen per month)
+        for (const h of exp.history) {
+          if (!existing.history.some(eh => eh.month === h.month)) {
+            existing.history.push(h);
+          }
+        }
+      } else {
+        groups.set(key, {
+          key,
+          description: exp.description,
+          expenseIds: [exp.id],
+          amount: exp.amount,
+          history: [...exp.history],
+          goal: exp.goal,
+        });
+      }
+    }
+
+    // Sort histories and filter groups with history
+    return Array.from(groups.values())
+      .map(g => ({ ...g, history: g.history.sort((a, b) => a.month.localeCompare(b.month)) }))
+      .filter(g => g.history.length > 0);
+  }, [expenses]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [selectedExpense, setSelectedExpense] = useState<GroupedExpense | null>(null);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
-  const [limitModal, setLimitModal] = useState<TrackedExpense | null>(null);
+  const [limitModal, setLimitModal] = useState<GroupedExpense | null>(null);
   const [limitValue, setLimitValue] = useState('');
-  const [addValueModal, setAddValueModal] = useState<TrackedExpense | null>(null);
+  const [addValueModal, setAddValueModal] = useState<GroupedExpense | null>(null);
   const [newMonth, setNewMonth] = useState(getCurrentMonth());
   const [newAmount, setNewAmount] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<GroupedExpense | null>(null);
 
-  function toggleCompare(id: string) {
+  function toggleCompare(key: string) {
     setCompareIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : prev.length < 4 ? [...prev, id] : prev
+      prev.includes(key) ? prev.filter(x => x !== key) : prev.length < 4 ? [...prev, key] : prev
     );
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    for (const id of deleteTarget.expenseIds) {
+      await deleteExpense(id);
+    }
+    toast(t('evolution.deleted'));
+    setDeleteTarget(null);
+    if (selectedExpense?.key === deleteTarget.key) setSelectedExpense(null);
   }
 
   return (
@@ -75,19 +120,19 @@ export default function Evolution() {
         <>
           {/* Overview Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tracked.map(exp => {
-              const trend = getTrend(exp.history);
-              const avg6 = getAverage(exp.history.slice(-6).map(h => h.amount));
-              const lastEntry = exp.history[exp.history.length - 1];
-              const prevEntry = exp.history.length >= 2 ? exp.history[exp.history.length - 2] : null;
-              const currentAmount = lastEntry?.amount ?? exp.amount;
+            {tracked.map(group => {
+              const trend = getTrend(group.history);
+              const avg6 = getAverage(group.history.slice(-6).map(h => h.amount));
+              const lastEntry = group.history[group.history.length - 1];
+              const prevEntry = group.history.length >= 2 ? group.history[group.history.length - 2] : null;
+              const currentAmount = lastEntry?.amount ?? group.amount;
               const variation = prevEntry ? getVariationPercent(currentAmount, prevEntry.amount) : 0;
-              const overLimit = exp.goal && currentAmount > exp.goal.limit;
-              const projection = getWeightedMovingAverage(exp.history);
-              const isComparing = compareIds.includes(exp.id);
+              const overLimit = group.goal && currentAmount > group.goal.limit;
+              const projection = getWeightedMovingAverage(group.history);
+              const isComparing = compareIds.includes(group.key);
 
               return (
-                <Card key={exp.id} onClick={() => setSelectedExpense(exp)}
+                <Card key={group.key} onClick={() => setSelectedExpense(group)}
                   className={`relative cursor-pointer ${isComparing ? 'ring-2 ring-primary-500' : ''}`}>
                   {overLimit && (
                     <div className="absolute top-3 right-3">
@@ -95,8 +140,8 @@ export default function Evolution() {
                     </div>
                   )}
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-sm">{exp.description}</h3>
-                    <button onClick={(e) => { e.stopPropagation(); toggleCompare(exp.id); }}
+                    <h3 className="font-semibold text-sm">{group.description}</h3>
+                    <button onClick={(e) => { e.stopPropagation(); toggleCompare(group.key); }}
                       className={`text-xs px-2 py-0.5 rounded border transition-colors ${isComparing ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600' : 'border-surface-300 dark:border-surface-600 text-surface-500 hover:border-primary-500'}`}
                     >{t('evolution.compare')}</button>
                   </div>
@@ -111,16 +156,20 @@ export default function Evolution() {
                       {trend === 'increasing' ? t('evolution.increasing') : trend === 'decreasing' ? t('evolution.decreasing') : t('evolution.stable')}
                     </Badge>
                     <p className="text-surface-400">{t('evolution.projection', { value: formatCurrency(projection) })}</p>
-                    {exp.goal && <p className={overLimit ? 'text-red-500 font-medium' : 'text-surface-400'}>{t('evolution.limit', { value: formatCurrency(exp.goal.limit) })}</p>}
+                    {group.goal && <p className={overLimit ? 'text-red-500 font-medium' : 'text-surface-400'}>{t('evolution.limit', { value: formatCurrency(group.goal.limit) })}</p>}
                   </div>
                   <div className="flex gap-1 mt-3">
-                    <button onClick={(e) => { e.stopPropagation(); setLimitModal(exp); setLimitValue(exp.goal ? String(exp.goal.limit) : ''); }}
+                    <button onClick={(e) => { e.stopPropagation(); setLimitModal(group); setLimitValue(group.goal ? String(group.goal.limit) : ''); }}
                       className="text-xs px-2 py-1 rounded bg-surface-100 dark:bg-surface-700 hover:bg-surface-200 dark:hover:bg-surface-600 text-surface-600 dark:text-surface-300 transition-colors">
                       <Target className="h-3 w-3 inline mr-1" />{t('evolution.setLimit')}
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); setAddValueModal(exp); setNewAmount(String(exp.amount)); setNewMonth(getCurrentMonth()); }}
+                    <button onClick={(e) => { e.stopPropagation(); setAddValueModal(group); setNewAmount(String(group.amount)); setNewMonth(getCurrentMonth()); }}
                       className="text-xs px-2 py-1 rounded bg-surface-100 dark:bg-surface-700 hover:bg-surface-200 dark:hover:bg-surface-600 text-surface-600 dark:text-surface-300 transition-colors">
                       <Plus className="h-3 w-3 inline mr-1" />{t('evolution.addValue')}
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(group); }}
+                      className="text-xs px-2 py-1 rounded bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors">
+                      <Trash2 className="h-3 w-3 inline mr-1" />{t('evolution.delete')}
                     </button>
                   </div>
                 </Card>
@@ -135,7 +184,7 @@ export default function Evolution() {
 
           {/* Compare Chart */}
           {showCompare && compareIds.length >= 2 && (
-            <CompareChart expenses={tracked.filter(e => compareIds.includes(e.id))} onClose={() => setShowCompare(false)} />
+            <CompareChart expenses={tracked.filter(e => compareIds.includes(e.key))} onClose={() => setShowCompare(false)} />
           )}
         </>
       )}
@@ -148,7 +197,7 @@ export default function Evolution() {
             <Button variant="secondary" onClick={() => setLimitModal(null)}>{t('common.cancel')}</Button>
             <Button onClick={async () => {
               if (limitModal && limitValue) {
-                await setExpenseGoal(limitModal.id, parseFloat(limitValue));
+                await setExpenseGoal(limitModal.expenseIds[0], parseFloat(limitValue));
                 toast(t('evolution.limitSaved'));
                 setLimitModal(null);
               }
@@ -166,7 +215,7 @@ export default function Evolution() {
             <Button variant="secondary" onClick={() => setAddValueModal(null)}>{t('common.cancel')}</Button>
             <Button onClick={async () => {
               if (addValueModal && newAmount) {
-                await addExpenseHistory(addValueModal.id, newMonth, parseFloat(newAmount));
+                await addExpenseHistory(addValueModal.expenseIds[0], newMonth, parseFloat(newAmount));
                 toast(t('evolution.valueSaved'));
                 setAddValueModal(null);
               }
@@ -174,11 +223,21 @@ export default function Evolution() {
           </div>
         </div>
       </Modal>
+
+      {/* Delete Confirm */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title={t('evolution.deleteConfirmTitle')}
+        message={t('evolution.deleteConfirmMsg', { name: deleteTarget?.description })}
+        confirmLabel={t('evolution.delete')}
+      />
     </div>
   );
 }
 
-function ExpenseDetailChart({ expense }: { expense: TrackedExpense }) {
+function ExpenseDetailChart({ expense }: { expense: GroupedExpense }) {
   const { t } = useTranslation();
 
   const data = useMemo(() => {
@@ -243,7 +302,7 @@ function ExpenseDetailChart({ expense }: { expense: TrackedExpense }) {
   );
 }
 
-function CompareChart({ expenses, onClose }: { expenses: TrackedExpense[]; onClose: () => void }) {
+function CompareChart({ expenses, onClose }: { expenses: GroupedExpense[]; onClose: () => void }) {
   const { t } = useTranslation();
 
   const allMonths = useMemo(() => {
@@ -277,7 +336,7 @@ function CompareChart({ expenses, onClose }: { expenses: TrackedExpense[]; onClo
           <Tooltip formatter={currencyFormatter} />
           <Legend />
           {expenses.map((e, i) => (
-            <Line key={e.id} type="monotone" dataKey={e.description} stroke={LINE_COLORS[i]} strokeWidth={2} dot={{ r: 3 }} />
+            <Line key={e.key} type="monotone" dataKey={e.description} stroke={LINE_COLORS[i]} strokeWidth={2} dot={{ r: 3 }} />
           ))}
         </LineChart>
       </ResponsiveContainer>

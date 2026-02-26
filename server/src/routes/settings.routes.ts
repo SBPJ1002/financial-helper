@@ -8,6 +8,5 @@ router.use(requireAuth);
 
 router.get('/', settingsController.getSettings);
 router.put('/', settingsController.updateSettings);
-router.post('/ai/test', settingsController.testAiConnection);
 
 export default router;

@@ -1,7 +1,6 @@
 import type { Response, NextFunction } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
 import * as adminService from '../services/admin.service.js';
-import { fetchAndStoreRates } from '../services/bcb.service.js';
 
 export async function listUsers(req: AuthRequest, res: Response, next: NextFunction) {
   try {
@@ -27,15 +26,6 @@ export async function getMetrics(_req: AuthRequest, res: Response, next: NextFun
   try {
     const metrics = await adminService.getMetrics();
     res.json(metrics);
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function refreshRates(_req: AuthRequest, res: Response, next: NextFunction) {
-  try {
-    await fetchAndStoreRates();
-    res.json({ message: 'Rates refreshed successfully' });
   } catch (err) {
     next(err);
   }

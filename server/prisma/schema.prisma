@@ -29,19 +29,49 @@ model User {
   neighborhood        String?
   city                String?
   state               String?
-  bankConnections     BankConnection[]
+  pluggyItems         PluggyItem[]
   categories          Category[]
   chatMessages        ChatMessage[]
+  classificationRules ClassificationRule[]
   expenses            Expense[]
   incomes             Income[]
-  investmentSnapshots InvestmentSnapshot[]
-  investments         Investment[]
   notifications       Notification[]
+  recurrenceGroups    RecurrenceGroup[]
   sessions            Session[]
-  simulationScenarios SimulationScenario[]
   settings            UserSettings?
+  plan                Plan                 @default(FREE)
+  financialProfile    UserFinancialProfile?
+  declarations        FixedExpenseDeclaration[]
+  invoicePayments     InvoicePayment[]
+  stdCounterparts     StdCounterpart[]
 
   @@map("users")
+}
+
+model UserFinancialProfile {
+  id                      String       @id @default(cuid())
+  userId                  String       @unique
+  primaryGoal             UserGoal?
+  financialControlScore   Int?
+  bankAccountCount        Int?
+  creditCardCount         Int?
+  preferredPaymentMethods String[]
+  incomeType              IncomeType?
+  expectedIncomeDay       Int?
+  incomeRange             IncomeRange?
+  incomeIsVariable        Boolean      @default(false)
+  housingType             HousingType?
+  hasDependents           Boolean      @default(false)
+  dependentTypes          String[]
+  expectedFixedExpenses   String[]
+  onboardingCompleted     Boolean      @default(false)
+  onboardingCompletedAt   DateTime?
+  onboardingStepReached   Int          @default(0)
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+  user                    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_financial_profiles")
 }
 
 model Session {
@@ -56,6 +86,224 @@ model Session {
   @@map("sessions")
 }
 
+// ============================================================
+// RAW LAYER — Exact Pluggy data, never altered after initial save
+// ============================================================
+
+model PluggyItem {
+  id              String    @id @default(cuid())
+  userId          String
+  pluggyItemId    String    @unique
+  connectorId     Int?
+  connectorName   String
+  status          String    @default("ACTIVE")
+  executionStatus String?
+  lastSyncedAt    DateTime?
+  syncCount       Int       @default(0)
+  rawJson         String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts        PluggyAccount[]
+
+  @@index([userId])
+  @@map("pluggy_items")
+}
+
+model PluggyAccount {
+  id                   String    @id @default(cuid())
+  pluggyItemId         String
+  pluggyAccountId      String    @unique
+  name                 String
+  type                 String
+  subtype              String?
+  number               String?
+  balance              Float     @default(0)
+  currencyCode         String    @default("BRL")
+  creditLimit          Float?
+  availableCreditLimit Float?
+  marketingName        String?
+  rawJson              String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  pluggyItem           PluggyItem @relation(fields: [pluggyItemId], references: [id], onDelete: Cascade)
+  transactions         PluggyTransaction[]
+  stdAccount           StdAccount?
+
+  @@index([pluggyItemId])
+  @@map("pluggy_accounts")
+}
+
+model PluggyTransaction {
+  id                   String    @id @default(cuid())
+  pluggyAccountId      String
+  pluggyTxId           String    @unique
+  description          String
+  descriptionRaw       String?
+  amount               Float
+  date                 DateTime
+  type                 String
+  category             String?
+  categoryId           String?
+  operationType        String?
+  currencyCode         String    @default("BRL")
+  // Credit card metadata
+  installmentNumber    Int?
+  totalInstallments    Int?
+  cardNumber           String?
+  billDate             DateTime?
+  // Payer info
+  payerName            String?
+  payerDocType         String?
+  payerDocValue        String?
+  // Receiver info
+  receiverName         String?
+  receiverDocType      String?
+  receiverDocValue     String?
+  // Merchant info
+  merchantName         String?
+  merchantBusinessName String?
+  merchantCnpj         String?
+  merchantCategoryCode String?
+  // Payment method from Pluggy
+  paymentMethod        String?
+  // Processing status
+  isProcessed          Boolean   @default(false)
+  processingError      String?
+  rawJson              String?
+  createdAt            DateTime  @default(now())
+  pluggyAccount        PluggyAccount @relation(fields: [pluggyAccountId], references: [id], onDelete: Cascade)
+  stdTransaction       StdTransaction?
+
+  @@index([pluggyAccountId, date])
+  @@index([isProcessed])
+  @@map("pluggy_transactions")
+}
+
+// ============================================================
+// STANDARDIZED LAYER — Clean, normalized, flagged
+// ============================================================
+
+model StdAccount {
+  id                  String         @id @default(cuid())
+  pluggyAccountId     String         @unique
+  userId              String
+  sourceType          StdSourceType  @default(BANK)
+  bankName            String
+  accountLabel        String
+  accountNumberMasked String?
+  currentBalance      Float          @default(0)
+  currencyCode        String         @default("BRL")
+  creditLimit         Float?
+  billingCycleDay     Int?
+  isActive            Boolean        @default(true)
+  isPrimary           Boolean        @default(false)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  pluggyAccount       PluggyAccount  @relation(fields: [pluggyAccountId], references: [id], onDelete: Cascade)
+  transactions        StdTransaction[]
+  creditInvoices      StdCreditInvoice[]
+  declarations        FixedExpenseDeclaration[]
+  invoicePayments     InvoicePayment[] @relation("invoicePaymentStdAccount")
+
+  @@index([userId])
+  @@map("std_accounts")
+}
+
+model StdCounterpart {
+  id               String    @id @default(cuid())
+  userId           String
+  document         String
+  documentType     DocumentType
+  displayName      String
+  rawNames         String[]
+  mccCode          String?
+  transactionCount Int       @default(0)
+  avgAmount        Float     @default(0)
+  isRecurring      Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions     StdTransaction[]
+
+  @@unique([userId, document])
+  @@map("std_counterparts")
+}
+
+model StdTransaction {
+  id                    String                    @id @default(cuid())
+  pluggyTransactionId   String                    @unique
+  stdAccountId          String
+  userId                String
+  descriptionOriginal   String
+  descriptionClean      String
+  direction             TransactionDirection
+  absoluteAmount        Float
+  date                  DateTime
+  currencyCode          String                    @default("BRL")
+  // Payment info
+  paymentMethod         StdPaymentMethod          @default(OTHER)
+  // Counterpart (denormalized for fast queries)
+  counterpartName       String?
+  counterpartDocument   String?
+  counterpartId         String?
+  // Installments
+  installmentGroupId    String?
+  installmentNumber     Int?
+  totalInstallments     Int?
+  // Flags
+  isInternalTransfer    Boolean                   @default(false)
+  isInvoicePayment      Boolean                   @default(false)
+  isRefund              Boolean                   @default(false)
+  isSalaryCandidate     Boolean                   @default(false)
+  // Classification
+  classificationStatus  StdClassificationStatus   @default(PENDING)
+  classificationSource  String?
+  confidenceScore       Float?
+  reviewStatus          String?
+  // App linkage
+  imported              Boolean                   @default(false)
+  recurrenceGroupId     String?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  pluggyTransaction     PluggyTransaction         @relation(fields: [pluggyTransactionId], references: [id], onDelete: Cascade)
+  stdAccount            StdAccount                @relation(fields: [stdAccountId], references: [id], onDelete: Cascade)
+  counterpart           StdCounterpart?           @relation(fields: [counterpartId], references: [id])
+  recurrenceGroup       RecurrenceGroup?          @relation(fields: [recurrenceGroupId], references: [id])
+  expense               Expense?
+  income                Income?
+  declarationMatches    DeclarationMatch[]
+  invoicePayment        InvoicePayment?
+
+  @@index([stdAccountId, date])
+  @@index([userId, date])
+  @@index([userId, imported])
+  @@index([installmentGroupId])
+  @@index([recurrenceGroupId])
+  @@map("std_transactions")
+}
+
+model StdCreditInvoice {
+  id             String     @id @default(cuid())
+  stdAccountId   String
+  referenceMonth String
+  closeDate      DateTime?
+  dueDate        DateTime?
+  totalAmount    Float      @default(0)
+  minimumPayment Float?
+  isPaid         Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  stdAccount     StdAccount @relation(fields: [stdAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([stdAccountId, referenceMonth])
+  @@map("std_credit_invoices")
+}
+
+// ============================================================
+// APP LAYER — Existing models with new FK columns
+// ============================================================
+
 model Income {
   id                String           @id @default(cuid())
   userId            String
@@ -65,14 +313,14 @@ model Income {
   recurrence        Recurrence       @default(MONTHLY)
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
-  bankTransactionId String?          @unique
+  stdTransactionId  String?          @unique
   categoryId        String?
   contractMonths    Int?
   contractStartDate DateTime?
   importBatchId     String?
   recurrenceDay     Int?
   currency          String           @default("BRL")
-  bankTransaction   BankTransaction? @relation(fields: [bankTransactionId], references: [id])
+  stdTransaction    StdTransaction?  @relation(fields: [stdTransactionId], references: [id])
   category          Category?        @relation(fields: [categoryId], references: [id])
   user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -108,7 +356,7 @@ model Expense {
   paymentMethod      PaymentMethod?
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
-  bankTransactionId  String?          @unique
+  stdTransactionId   String?          @unique
   installmentGroupId String?
   installmentNumber  Int?
   totalInstallments  Int?
@@ -117,7 +365,7 @@ model Expense {
   currency           String           @default("BRL")
   goal               ExpenseGoal?
   history            ExpenseHistory[]
-  bankTransaction    BankTransaction? @relation(fields: [bankTransactionId], references: [id])
+  stdTransaction     StdTransaction?  @relation(fields: [stdTransactionId], references: [id])
   category           Category         @relation(fields: [categoryId], references: [id])
   user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -149,118 +397,6 @@ model ExpenseGoal {
   @@map("expense_goals")
 }
 
-model InvestmentType {
-  id          String             @id @default(cuid())
-  name        String             @unique
-  category    InvestmentCategory
-  isDefault   Boolean            @default(false)
-  investments Investment[]
-
-  @@map("investment_types")
-}
-
-model Investment {
-  id                 String               @id @default(cuid())
-  userId             String
-  name               String
-  investmentTypeId   String
-  amountInvested     Float
-  currentValue       Float?
-  applicationDate    DateTime
-  maturityDate       DateTime?
-  yieldDescription   String
-  yieldType          YieldType
-  yieldRate          Float?
-  institution        String
-  status             InvestmentStatus     @default(ACTIVE)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  assetId            String?
-  averagePrice       Float?
-  purchaseDate       DateTime?
-  quantity           Float?
-  treasuryIndex      String?
-  treasuryRate       Float?
-  treasuryTitle      String?
-  amountProfit       Float?
-  annualRate         Float?
-  lastMonthRate      Float?
-  pluggyInvestmentId String?              @unique
-  snapshots          InvestmentSnapshot[]
-  asset              Asset?               @relation(fields: [assetId], references: [id])
-  investmentType     InvestmentType       @relation(fields: [investmentTypeId], references: [id])
-  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("investments")
-}
-
-model InvestmentSnapshot {
-  id           String     @id @default(cuid())
-  investmentId String
-  userId       String
-  month        String
-  value        Float
-  createdAt    DateTime   @default(now())
-  investment   Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([investmentId, month])
-  @@index([userId])
-  @@map("investment_snapshots")
-}
-
-model Asset {
-  id           String       @id @default(cuid())
-  ticker       String       @unique
-  name         String
-  type         AssetType
-  sector       String?
-  currency     String       @default("BRL")
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  priceHistory AssetPrice[]
-  investments  Investment[]
-
-  @@map("assets")
-}
-
-model AssetPrice {
-  id        String   @id @default(cuid())
-  assetId   String
-  price     Float
-  date      DateTime
-  source    String
-  createdAt DateTime @default(now())
-  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  @@unique([assetId, date])
-  @@index([assetId, date])
-  @@map("asset_prices")
-}
-
-model SimulationScenario {
-  id             String   @id @default(cuid())
-  userId         String
-  name           String
-  initialAmount  Float
-  monthlyDeposit Float
-  annualRate     Float
-  periodMonths   Int
-  interestType   String
-  referenceIndex String?
-  totalAmount    Float?
-  totalInvested  Float?
-  totalYield     Float?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("simulation_scenarios")
-}
-
 model UserSettings {
   id                   String   @id @default(cuid())
   userId               String   @unique
@@ -277,7 +413,6 @@ model UserSettings {
   alertExpenseAbove    Boolean  @default(true)
   alertInvestmentDrop  Boolean  @default(true)
   alertBillDue         Boolean  @default(true)
-  aiIncludeInvestments Boolean  @default(true)
   aiIncludeExpenses    Boolean  @default(true)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -286,74 +421,64 @@ model UserSettings {
   @@map("user_settings")
 }
 
-model EconomicRate {
-  id        String   @id @default(cuid())
-  type      String
-  value     Float
-  date      DateTime
-  source    String   @default("BCB")
-  createdAt DateTime @default(now())
-
-  @@unique([type, date])
-  @@index([type, date])
-  @@map("economic_rates")
-}
-
-model BankConnection {
-  id            String               @id @default(cuid())
-  userId        String
-  pluggyItemId  String               @unique
-  connectorName String
-  status        BankConnectionStatus @default(ACTIVE)
-  lastSyncAt    DateTime?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  accounts      BankAccount[]
-  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+model RecurrenceGroup {
+  id                 String            @id @default(cuid())
+  userId             String
+  label              String
+  counterpartPattern String?
+  amountAvg          Float
+  amountTolerance    Float             @default(0.15)
+  dayOfMonthAvg      Int?
+  dayTolerance       Int               @default(5)
+  transactionType    String            @default("fixed_expense")
+  categoryName       String?
+  occurrenceCount    Int               @default(0)
+  firstSeenAt        DateTime
+  lastSeenAt         DateTime
+  isActive           Boolean           @default(true)
+  confirmedByUser    Boolean           @default(false)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions       StdTransaction[]
 
   @@index([userId])
-  @@map("bank_connections")
+  @@map("recurrence_groups")
 }
 
-model BankAccount {
-  id               String            @id @default(cuid())
-  bankConnectionId String
-  pluggyAccountId  String            @unique
-  name             String
-  type             String
-  balance          Float             @default(0)
-  currencyCode     String            @default("BRL")
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  bankConnection   BankConnection    @relation(fields: [bankConnectionId], references: [id], onDelete: Cascade)
-  transactions     BankTransaction[]
+model ClassificationRule {
+  id                       String   @id @default(cuid())
+  userId                   String
+  matchCounterpartDocument String?
+  matchCounterpartName     String?
+  matchDescriptionContains String?
+  matchPaymentMethod       String?
+  matchAmountMin           Float?
+  matchAmountMax           Float?
+  transactionType          String
+  categoryName             String?
+  customLabel              String?
+  priority                 Int      @default(100)
+  isActive                 Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([bankConnectionId])
-  @@map("bank_accounts")
+  @@index([userId])
+  @@map("classification_rules")
 }
 
-model BankTransaction {
-  id                 String      @id @default(cuid())
-  bankAccountId      String
-  pluggyTxId         String      @unique
-  description        String
-  amount             Float
-  date               DateTime
-  type               String
-  category           String?
-  createdAt          DateTime    @default(now())
-  imported           Boolean     @default(false)
-  installmentGroupId String?
-  installmentNumber  Int?
-  operationType      String?
-  totalInstallments  Int?
-  bankAccount        BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
-  expense            Expense?
-  income             Income?
+model KeywordMapping {
+  id              String  @id @default(cuid())
+  keyword         String
+  matchField      String  @default("normalized_description")
+  matchType       String  @default("contains")
+  transactionType String
+  categoryName    String?
+  confidenceBoost Float   @default(0.50)
+  isActive        Boolean @default(true)
 
-  @@index([bankAccountId, date])
-  @@index([installmentGroupId])
-  @@map("bank_transactions")
+  @@map("keyword_mappings")
 }
 
 model ChatMessage {
@@ -393,6 +518,74 @@ model SystemMetric {
 
   @@index([key, createdAt])
   @@map("system_metrics")
+}
+
+model FixedExpenseDeclaration {
+  id                        String                   @id @default(cuid())
+  userId                    String
+  label                     String
+  categoryName              String?
+  paymentMethod             DeclarationPaymentMethod
+  creditAccountId           String?
+  estimatedAmount           Float
+  amountTolerance           Float                    @default(0.15)
+  expectedDay               Int?
+  dayTolerance              Int                      @default(5)
+  matchKeywords             String[]
+  matchCounterpartDocument  String?
+  isActive                  Boolean                  @default(true)
+  createdAt                 DateTime                 @default(now())
+  updatedAt                 DateTime                 @updatedAt
+  user                      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditAccount             StdAccount?              @relation(fields: [creditAccountId], references: [id])
+  matches                   DeclarationMatch[]
+
+  @@index([userId])
+  @@map("fixed_expense_declarations")
+}
+
+model DeclarationMatch {
+  id                String                  @id @default(cuid())
+  declarationId     String
+  stdTransactionId  String
+  strategy          MatchStrategy
+  confidenceScore   Float
+  month             String
+  matchedAmount     Float
+  isConfirmed       Boolean                 @default(false)
+  createdAt         DateTime                @default(now())
+  declaration       FixedExpenseDeclaration  @relation(fields: [declarationId], references: [id], onDelete: Cascade)
+  stdTransaction    StdTransaction          @relation(fields: [stdTransactionId], references: [id], onDelete: Cascade)
+
+  @@unique([declarationId, month])
+  @@unique([stdTransactionId, declarationId])
+  @@map("declaration_matches")
+}
+
+model InvoicePayment {
+  id                  String          @id @default(cuid())
+  userId              String
+  stdTransactionId    String          @unique
+  stdAccountId        String
+  amount              Float
+  month               String
+  detectedDescription String
+  createdAt           DateTime        @default(now())
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stdTransaction      StdTransaction  @relation(fields: [stdTransactionId], references: [id], onDelete: Cascade)
+  stdAccount          StdAccount      @relation("invoicePaymentStdAccount", fields: [stdAccountId], references: [id])
+
+  @@map("invoice_payments")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Plan {
+  FREE
+  AI_AGENT
+  FULL
 }
 
 enum Role {
@@ -441,34 +634,6 @@ enum NotificationType {
   CONTRACT_ENDING
 }
 
-enum InvestmentCategory {
-  FIXED_INCOME
-  VARIABLE_INCOME
-  OTHER
-}
-
-enum InvestmentStatus {
-  ACTIVE
-  REDEEMED
-}
-
-enum YieldType {
-  CDI_PERCENTAGE
-  SELIC
-  IPCA_PLUS
-  PREFIXED
-  POUPANCA
-  VARIABLE
-}
-
-enum AssetType {
-  STOCK
-  FII
-  ETF
-  BDR
-  CRYPTO
-}
-
 enum Gender {
   MALE
   FEMALE
@@ -476,8 +641,84 @@ enum Gender {
   PREFER_NOT_TO_SAY
 }
 
-enum BankConnectionStatus {
-  ACTIVE
-  INACTIVE
-  ERROR
+enum DeclarationPaymentMethod {
+  PIX
+  BOLETO
+  AUTO_DEBIT
+  CREDIT_CARD
+}
+
+enum MatchStrategy {
+  CNPJ_EXACT
+  KEYWORD
+  FUZZY_NAME
+  AMOUNT_RECURRENCE
+}
+
+enum UserGoal {
+  SAVE_MORE
+  PAY_OFF_DEBT
+  CONTROL_SPENDING
+  INVEST_MORE
+  BUILD_EMERGENCY_FUND
+}
+
+enum IncomeType {
+  CLT
+  SELF_EMPLOYED
+  FREELANCER
+  BUSINESS_OWNER
+  RETIREMENT
+  OTHER_INCOME
+}
+
+enum HousingType {
+  OWN_PAID
+  OWN_MORTGAGE
+  RENT
+  FAMILY
+}
+
+enum IncomeRange {
+  UP_TO_2K
+  FROM_2K_TO_5K
+  FROM_5K_TO_10K
+  FROM_10K_TO_20K
+  ABOVE_20K
+}
+
+// New enums for 3-layer architecture
+
+enum TransactionDirection {
+  CREDIT
+  DEBIT
+}
+
+enum StdPaymentMethod {
+  PIX
+  BOLETO
+  CREDIT_CARD
+  DEBIT_CARD
+  AUTO_DEBIT
+  TRANSFER
+  CASH
+  OTHER
+}
+
+enum StdClassificationStatus {
+  PENDING
+  AUTO_CLASSIFIED
+  USER_CONFIRMED
+  USER_CORRECTED
+}
+
+enum StdSourceType {
+  BANK
+  CREDIT
+  INVESTMENT
+}
+
+enum DocumentType {
+  CPF
+  CNPJ
 }

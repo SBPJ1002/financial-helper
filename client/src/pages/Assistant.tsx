@@ -1,19 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Send, Trash2, Bot, User, Settings as SettingsIcon } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Send, Trash2, Bot, User } from 'lucide-react';
 import Button from '../components/ui/Button';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useChatStore } from '../stores/useChatStore';
-import { useUserSettingsStore } from '../stores/useUserSettingsStore';
-
-const PROVIDER_LABEL = '🔵 Gemini (Google)';
 
 export default function Assistant() {
   const { t } = useTranslation();
   const { messages, isLoading, sendMessage, clearHistory, fetchHistory } = useChatStore();
-  const { settings, fetchSettings } = useUserSettingsStore();
-  const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [clearConfirm, setClearConfirm] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -22,15 +16,13 @@ export default function Assistant() {
     { emoji: '📊', label: t('assistant.quickAnalyze') },
     { emoji: '💡', label: t('assistant.quickSave') },
     { emoji: '🎯', label: t('assistant.quickPlan') },
-    { emoji: '📈', label: t('assistant.quickInvestments') },
     { emoji: '🏦', label: t('assistant.quickEmergency') },
     { emoji: '📉', label: t('assistant.quickIncreasing') },
   ];
 
   useEffect(() => {
     fetchHistory();
-    fetchSettings();
-  }, [fetchHistory, fetchSettings]);
+  }, [fetchHistory]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,28 +42,6 @@ export default function Assistant() {
     }
   }
 
-  const providerLabel = PROVIDER_LABEL;
-  const modelLabel = settings?.aiModel || 'auto';
-  const isConfigured = settings?.hasAiApiKey;
-
-  // Unconfigured state
-  if (settings && !isConfigured) {
-    return (
-      <div className="animate-fade-in flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-center">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-accent-500 to-primary-600 flex items-center justify-center mb-4">
-          <Bot className="h-8 w-8 text-white" />
-        </div>
-        <h2 className="text-xl font-bold mb-2">{t('assistant.configureTitle')}</h2>
-        <p className="text-sm text-surface-500 max-w-md mb-6">
-          {t('assistant.configureDesc')}
-        </p>
-        <Button onClick={() => navigate('/settings')}>
-          <SettingsIcon className="h-4 w-4" /> {t('assistant.goToSettings')}
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="animate-fade-in flex flex-col h-[calc(100vh-6rem)] lg:h-[calc(100vh-3rem)]">
       <div className="flex items-center justify-between mb-4">
@@ -84,15 +54,9 @@ export default function Assistant() {
             <p className="text-xs text-surface-500">{t('assistant.subtitle')}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Provider badge */}
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-surface-600 dark:text-surface-400">
-            {providerLabel} <span className="text-surface-400 dark:text-surface-500">· {modelLabel}</span>
-          </span>
-          <Button variant="ghost" size="sm" onClick={() => setClearConfirm(true)}>
-            <Trash2 className="h-4 w-4" /> {t('assistant.clear')}
-          </Button>
-        </div>
+        <Button variant="ghost" size="sm" onClick={() => setClearConfirm(true)}>
+          <Trash2 className="h-4 w-4" /> {t('assistant.clear')}
+        </Button>
       </div>
 
       {/* Chat area */}

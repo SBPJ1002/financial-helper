@@ -5,7 +5,6 @@ import HeroSection from '../components/landing/HeroSection';
 import CredibilityBar from '../components/landing/CredibilityBar';
 import FeaturesSection from '../components/landing/FeaturesSection';
 import HowItWorksSection from '../components/landing/HowItWorksSection';
-import InvestmentsShowcase from '../components/landing/InvestmentsShowcase';
 import AIAssistantShowcase from '../components/landing/AIAssistantShowcase';
 import DashboardPreview from '../components/landing/DashboardPreview';
 import SecuritySection from '../components/landing/SecuritySection';
@@ -34,7 +33,6 @@ export default function LandingPage() {
       <CredibilityBar />
       <FeaturesSection />
       <HowItWorksSection />
-      <InvestmentsShowcase />
       <AIAssistantShowcase />
       <DashboardPreview />
       <SecuritySection />

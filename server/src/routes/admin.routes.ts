@@ -9,7 +9,6 @@ router.use(requireAuth, requireAdmin);
 router.get('/users', adminController.listUsers);
 router.patch('/users/:id', adminController.updateUser);
 router.get('/metrics', adminController.getMetrics);
-router.post('/rates/refresh', adminController.refreshRates);
 router.get('/logs', adminController.getLogs);
 
 export default router;

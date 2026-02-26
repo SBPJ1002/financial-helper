@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { DollarSign, TrendingDown, TrendingUp, Wallet, PiggyBank, Landmark, ArrowRight } from 'lucide-react';
+import { DollarSign, TrendingDown, TrendingUp, Wallet, Landmark, ArrowRight, CreditCard, Building2, PenLine, ClipboardCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import StatCard from '../components/ui/StatCard';
 import Card from '../components/ui/Card';
@@ -16,7 +16,7 @@ const CHART_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#0
 
 export default function Dashboard() {
   const { t } = useTranslation();
-  const { dashboard, incomes, expenses, investments, fetchAll, isLoading } = useFinanceStore();
+  const { dashboard, incomes, expenses, fetchAll, isLoading } = useFinanceStore();
   const { isAvailable: bankingAvailable, accounts, checkAvailability, fetchAccounts } = useBankingStore();
   const navigate = useNavigate();
 
@@ -25,11 +25,6 @@ export default function Dashboard() {
     checkAvailability();
     fetchAccounts();
   }, [fetchAll, checkAvailability, fetchAccounts]);
-
-  const totalInvested = useMemo(
-    () => investments.filter(i => i.status === 'ACTIVE').reduce((s, i) => s + (i.currentValue ?? i.amountInvested), 0),
-    [investments],
-  );
 
   const pieData = useMemo(() => {
     if (!dashboard) return [];
@@ -76,12 +71,11 @@ export default function Dashboard() {
     <div className="space-y-6 animate-fade-in">
       <h1 className="text-2xl font-bold">{t('dashboard.title')}</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label={t('dashboard.monthlyIncome')} value={formatCurrency(dashboard.totalIncome)} icon={DollarSign} color="text-green-500" />
         <StatCard label={t('dashboard.fixedExpenses')} value={formatCurrency(dashboard.totalFixed)} icon={TrendingDown} color="text-red-500" />
         <StatCard label={t('dashboard.variableExpenses')} value={formatCurrency(dashboard.totalVariable)} icon={Wallet} color="text-amber-500" />
         <StatCard label={t('dashboard.availableBalance')} value={formatCurrency(dashboard.balance)} icon={TrendingUp} color={dashboard.balance >= 0 ? 'text-green-500' : 'text-red-500'} />
-        <StatCard label={t('dashboard.totalInvested')} value={formatCurrency(totalInvested)} icon={PiggyBank} color="text-accent-500" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -157,7 +151,7 @@ export default function Dashboard() {
                   <div key={acc.id} className="flex items-center justify-between py-2 border-b border-surface-100 dark:border-surface-700 last:border-0">
                     <div>
                       <p className="text-sm font-medium">{acc.name}</p>
-                      <p className="text-xs text-surface-500">{acc.bankConnection.connectorName} · {acc.type}</p>
+                      <p className="text-xs text-surface-500">{acc.bankName || acc.connectorName} · {acc.type}</p>
                     </div>
                     <p className={`text-sm font-semibold ${acc.balance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                       {formatCurrency(acc.balance)}
@@ -182,6 +176,64 @@ export default function Dashboard() {
           </Card>
         )}
       </div>
+
+      {/* Source Breakdown */}
+      {(dashboard.fixedBySource || dashboard.invoiceTotal !== undefined) && (
+        <Card>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <ClipboardCheck className="h-5 w-5" /> {t('dashboard.sourceBreakdown')}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {dashboard.fixedBySource && (
+              <div>
+                <p className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2">{t('dashboard.fixedExpenses')}</p>
+                <div className="space-y-1.5">
+                  <SourceRow icon={Building2} label={t('dashboard.fromBank')} value={dashboard.fixedBySource.bank} />
+                  <SourceRow icon={CreditCard} label={t('dashboard.fromCard')} value={dashboard.fixedBySource.creditCard} />
+                  <SourceRow icon={PenLine} label={t('dashboard.manual')} value={dashboard.fixedBySource.manual} />
+                </div>
+              </div>
+            )}
+            {dashboard.variableBySource && (
+              <div>
+                <p className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2">{t('dashboard.variableExpenses')}</p>
+                <div className="space-y-1.5">
+                  <SourceRow icon={Building2} label={t('dashboard.fromBank')} value={dashboard.variableBySource.bank} />
+                  <SourceRow icon={CreditCard} label={t('dashboard.fromCard')} value={dashboard.variableBySource.creditCard} />
+                  <SourceRow icon={PenLine} label={t('dashboard.manual')} value={dashboard.variableBySource.manual} />
+                </div>
+              </div>
+            )}
+            {dashboard.invoiceTotal !== undefined && dashboard.invoiceTotal > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2">{t('dashboard.invoicePayments')}</p>
+                <p className="text-lg font-bold text-surface-700 dark:text-surface-200">{formatCurrency(dashboard.invoiceTotal)}</p>
+                <p className="text-xs text-surface-400">{t('dashboard.invoiceInfo')}</p>
+              </div>
+            )}
+            {dashboard.declarationMatchRate !== undefined && dashboard.declarationMatchRate > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2">{t('dashboard.matchRate')}</p>
+                <p className="text-lg font-bold text-primary-500">{Math.round(dashboard.declarationMatchRate * 100)}%</p>
+                <p className="text-xs text-surface-400">{t('dashboard.matchRateInfo')}</p>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function SourceRow({ icon: Icon, label, value }: { icon: typeof Building2; label: string; value: number }) {
+  if (value === 0) return null;
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center gap-1.5 text-surface-600 dark:text-surface-400">
+        <Icon className="h-3.5 w-3.5" />
+        <span>{label}</span>
+      </div>
+      <span className="font-medium">{formatCurrency(value)}</span>
     </div>
   );
 }

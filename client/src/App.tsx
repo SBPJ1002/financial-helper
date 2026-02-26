@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ToastProvider } from './components/ui/Toast';
 import AppLayout from './components/layout/AppLayout';
@@ -9,8 +9,6 @@ import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
 import Evolution from './pages/Evolution';
-import Investments from './pages/Investments';
-import Simulator from './pages/Simulator';
 import Assistant from './pages/Assistant';
 import SettingsPage from './pages/SettingsPage';
 import Login from './pages/Login';
@@ -18,8 +16,8 @@ import Register from './pages/Register';
 import Banking from './pages/Banking';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
-import AdminRates from './pages/admin/AdminRates';
 import AdminLogs from './pages/admin/AdminLogs';
+import Onboarding from './pages/Onboarding';
 import { useSettingsStore } from './stores/useSettingsStore';
 import { useAuthStore } from './stores/useAuthStore';
 import { useUserSettingsStore } from './stores/useUserSettingsStore';
@@ -58,13 +56,12 @@ export default function App() {
 
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/expenses" element={<Expenses />} />
               <Route path="/evolution" element={<Evolution />} />
-              <Route path="/investments" element={<Investments />} />
-              <Route path="/simulator" element={<Simulator />} />
-              <Route path="/assistant" element={<Assistant />} />
+              <Route path="/assistant" element={<AssistantGuard />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/banking" element={<Banking />} />
 
@@ -72,7 +69,6 @@ export default function App() {
               <Route element={<AdminRoute />}>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/users" element={<AdminUsers />} />
-                <Route path="/admin/rates" element={<AdminRates />} />
                 <Route path="/admin/logs" element={<AdminLogs />} />
               </Route>
             </Route>
@@ -81,4 +77,10 @@ export default function App() {
       </ToastProvider>
     </BrowserRouter>
   );
+}
+
+function AssistantGuard() {
+  const user = useAuthStore((s) => s.user);
+  if (user?.plan === 'FREE') return <Navigate to="/dashboard" replace />;
+  return <Assistant />;
 }

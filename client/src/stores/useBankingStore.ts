@@ -1,30 +1,45 @@
 import { create } from 'zustand';
 import api from '../services/api';
 
-interface BankAccount {
+interface StdAccount {
   id: string;
   name: string;
   type: string;
+  sourceType: string;
   balance: number;
-  bankConnection: { connectorName: string };
+  bankName: string;
+  connectorName: string;
 }
 
-interface BankTransaction {
+interface StdTransaction {
   id: string;
   description: string;
+  descriptionOriginal: string;
+  direction: 'CREDIT' | 'DEBIT';
   amount: number;
   date: string;
-  type: string;
-  category: string | null;
-  bankAccount: { name: string; bankConnection: { connectorName: string } };
+  paymentMethod: string;
+  counterpartName: string | null;
+  isInternalTransfer: boolean;
+  isInvoicePayment: boolean;
+  isRefund: boolean;
+  imported: boolean;
+  installmentNumber: number | null;
+  totalInstallments: number | null;
+  stdAccount: {
+    accountLabel: string;
+    bankName: string;
+    sourceType: string;
+  };
 }
 
 interface BankConnection {
   id: string;
+  pluggyItemId: string;
   connectorName: string;
   status: string;
   lastSyncAt: string | null;
-  accounts: Array<{ id: string; name: string; type: string; balance: number }>;
+  accounts: Array<{ id: string; name: string; type: string; sourceType: string; balance: number }>;
 }
 
 interface ImportResult {
@@ -42,15 +57,14 @@ interface ImportBatch {
 }
 
 interface SyncResult {
-  investments: { synced: number; skipped: number };
   transactions: { synced: number; newCount: number };
   accounts: number;
 }
 
 interface BankingState {
   connections: BankConnection[];
-  accounts: BankAccount[];
-  transactions: BankTransaction[];
+  accounts: StdAccount[];
+  transactions: StdTransaction[];
   totalPages: number;
   isLoading: boolean;
   isAvailable: boolean | null;

@@ -42,7 +42,7 @@ export async function create(userId: string, data: CreateExpenseInput) {
   });
   if (!category) throw ApiError.badRequest('Invalid category');
 
-  return prisma.expense.create({
+  const expense = await prisma.expense.create({
     data: {
       userId,
       description: data.description,
@@ -57,6 +57,21 @@ export async function create(userId: string, data: CreateExpenseInput) {
       fixedAmountType: data.type === 'FIXED' ? (data.fixedAmountType ?? 'FIXED_AMOUNT') : null,
     },
     include: { category: true, history: true, goal: true },
+  });
+
+  if (data.type === 'FIXED') {
+    const d = new Date(data.date);
+    const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    await prisma.expenseHistory.upsert({
+      where: { expenseId_month: { expenseId: expense.id, month } },
+      update: { amount: data.amount },
+      create: { expenseId: expense.id, month, amount: data.amount },
+    });
+  }
+
+  return prisma.expense.findUnique({
+    where: { id: expense.id },
+    include: { category: true, history: { orderBy: { month: 'asc' } }, goal: true },
   });
 }
 
@@ -210,7 +225,7 @@ export async function generateRecurring(userId: string, id: string, months: numb
     const day = Math.min(expense.dueDay || 1, new Date(futureDate.getFullYear(), futureDate.getMonth() + 1, 0).getDate());
     const recordDate = new Date(futureDate.getFullYear(), futureDate.getMonth(), day);
 
-    await prisma.expense.create({
+    const created_expense = await prisma.expense.create({
       data: {
         userId,
         description: expense.description,
@@ -224,6 +239,12 @@ export async function generateRecurring(userId: string, id: string, months: numb
         fixedAmountType: expense.fixedAmountType,
       },
     });
+
+    const historyAmount = expense.fixedAmountType === 'FIXED_AMOUNT' ? expense.amount : 0;
+    await prisma.expenseHistory.create({
+      data: { expenseId: created_expense.id, month: monthStr, amount: historyAmount },
+    });
+
     created++;
   }
 
@@ -259,7 +280,7 @@ export async function toggleType(userId: string, id: string) {
 
 export async function getProjections(userId: string, monthsAhead: number = 6) {
   const fixedExpenses = await prisma.expense.findMany({
-    where: { userId, type: 'FIXED', bankTransactionId: null },
+    where: { userId, type: 'FIXED', stdTransactionId: null },
     include: { category: true },
   });
 

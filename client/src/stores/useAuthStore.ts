@@ -22,7 +22,9 @@ interface User {
   fullName: string;
   email: string;
   role: 'USER' | 'ADMIN';
+  plan: 'FREE' | 'AI_AGENT' | 'FULL';
   createdAt: string;
+  onboardingCompleted: boolean;
 }
 
 interface AuthState {

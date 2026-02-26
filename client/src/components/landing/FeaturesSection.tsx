@@ -1,4 +1,4 @@
-import { Wallet, TrendingUp, PiggyBank, RefreshCcw, Calculator, Bot } from 'lucide-react';
+import { Wallet, TrendingUp, RefreshCcw, Bot } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ScrollReveal from './ScrollReveal';
 
@@ -19,22 +19,10 @@ export default function FeaturesSection() {
       color: 'from-orange-500 to-amber-600',
     },
     {
-      icon: PiggyBank,
-      title: t('landing.investmentManagement'),
-      description: t('landing.investmentManagementDesc'),
-      color: 'from-primary-500 to-primary-700',
-    },
-    {
       icon: RefreshCcw,
       title: t('landing.realTimeRates'),
       description: t('landing.realTimeRatesDesc'),
       color: 'from-cyan-500 to-blue-600',
-    },
-    {
-      icon: Calculator,
-      title: t('landing.simulatorFeature'),
-      description: t('landing.simulatorFeatureDesc'),
-      color: 'from-accent-500 to-accent-700',
     },
     {
       icon: Bot,

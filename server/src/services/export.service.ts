@@ -1,6 +1,6 @@
 import { prisma } from '../config/prisma.js';
 
-type Section = 'incomes' | 'expenses' | 'investments' | 'categories';
+type Section = 'incomes' | 'expenses' | 'categories';
 
 export async function exportData(userId: string, format: 'json' | 'csv', sections: Section[]) {
   const data: Record<string, any[]> = {};
@@ -30,14 +30,6 @@ export async function exportData(userId: string, format: 'json' | 'csv', section
         goal: true,
       },
       orderBy: { date: 'desc' },
-    });
-  }
-
-  if (sections.includes('investments')) {
-    data.investments = await prisma.investment.findMany({
-      where: { userId },
-      include: { snapshots: true },
-      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -77,18 +69,6 @@ export async function exportData(userId: string, format: 'json' | 'csv', section
         csvEscape(e.description), e.amount, e.date.toISOString().slice(0, 10),
         e.type, csvEscape(e.category?.name || ''), e.status, e.dueDay || '',
         e.fixedAmountType || '', e.paymentMethod || '',
-      ].join(','));
-    }
-    csvParts.push('');
-  }
-
-  if (data.investments) {
-    csvParts.push('--- INVESTMENTS ---');
-    csvParts.push('name,type,subtype,amount,currentValue,startDate,status');
-    for (const inv of data.investments) {
-      csvParts.push([
-        csvEscape(inv.name), inv.type, inv.subtype || '', inv.amount,
-        inv.currentValue, inv.startDate.toISOString().slice(0, 10), inv.status,
       ].join(','));
     }
   }

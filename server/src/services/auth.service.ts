@@ -53,7 +53,7 @@ export async function register(input: RegisterInput) {
       city: input.city,
       state: input.state,
     },
-    select: { id: true, fullName: true, email: true, role: true, createdAt: true },
+    select: { id: true, fullName: true, email: true, role: true, plan: true, createdAt: true },
   });
 
   // Create default categories for the new user
@@ -137,6 +137,7 @@ export async function login(input: LoginInput) {
       fullName: user.fullName,
       email: user.email,
       role: user.role,
+      plan: user.plan,
       createdAt: user.createdAt,
     },
     token,
@@ -150,12 +151,28 @@ export async function logout(token: string) {
 export async function getMe(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, fullName: true, email: true, role: true, createdAt: true },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      role: true,
+      plan: true,
+      createdAt: true,
+      financialProfile: { select: { onboardingCompleted: true } },
+    },
   });
 
   if (!user) {
     throw ApiError.notFound('User not found');
   }
 
-  return user;
+  return {
+    id: user.id,
+    fullName: user.fullName,
+    email: user.email,
+    role: user.role,
+    plan: user.plan,
+    createdAt: user.createdAt,
+    onboardingCompleted: user.financialProfile?.onboardingCompleted ?? false,
+  };
 }

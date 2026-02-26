@@ -5,8 +5,8 @@ import * as exportService from '../services/export.service.js';
 export async function exportData(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const format = (req.query.format as string) === 'csv' ? 'csv' : 'json';
-    const sectionsParam = (req.query.sections as string) || 'incomes,expenses,investments,categories';
-    const validSections = ['incomes', 'expenses', 'investments', 'categories'] as const;
+    const sectionsParam = (req.query.sections as string) || 'incomes,expenses,categories';
+    const validSections = ['incomes', 'expenses', 'categories'] as const;
     const sections = sectionsParam.split(',').filter(s => validSections.includes(s as any)) as typeof validSections[number][];
 
     if (sections.length === 0) {

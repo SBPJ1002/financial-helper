@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  LayoutDashboard, Wallet, TrendingUp, PiggyBank, Calculator,
+  LayoutDashboard, Wallet, TrendingUp,
   Bot, Settings, Menu, X, Sun, Moon, DollarSign, LogOut, Shield, Landmark,
   Bell, CheckCheck, AlertTriangle, FileText, Clock,
 } from 'lucide-react';
@@ -15,9 +15,6 @@ const NAV_ITEMS = [
   { to: '/dashboard', icon: LayoutDashboard, labelKey: 'sidebar.dashboard' },
   { to: '/expenses', icon: Wallet, labelKey: 'sidebar.expenses' },
   { to: '/evolution', icon: TrendingUp, labelKey: 'sidebar.evolution' },
-  { to: '/investments', icon: PiggyBank, labelKey: 'sidebar.investments' },
-  { to: '/simulator', icon: Calculator, labelKey: 'sidebar.simulator' },
-  { to: '/assistant', icon: Bot, labelKey: 'sidebar.assistant' },
   { to: '/settings', icon: Settings, labelKey: 'sidebar.settings' },
 ];
 
@@ -97,6 +94,23 @@ export default function Sidebar() {
             {t(item.labelKey)}
           </NavLink>
         ))}
+
+        {user?.plan !== 'FREE' && (
+          <NavLink
+            to="/assistant"
+            onClick={() => setMobileOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+              ${isActive
+                ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                : 'text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700/50'
+              }`
+            }
+          >
+            <Bot className="h-5 w-5 shrink-0" />
+            {t('sidebar.assistant')}
+          </NavLink>
+        )}
 
         {bankingAvailable && (
           <NavLink

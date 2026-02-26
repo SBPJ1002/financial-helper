@@ -3,6 +3,36 @@ import { Link } from 'react-router-dom';
 import { DollarSign, Menu, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+function LanguageToggle() {
+  const { i18n } = useTranslation();
+  const isEn = i18n.language === 'en-US' || i18n.language === 'en';
+
+  return (
+    <div className="flex items-center rounded-lg border border-surface-600 overflow-hidden text-xs font-medium">
+      <button
+        onClick={() => i18n.changeLanguage('pt-BR')}
+        className={`px-2.5 py-1.5 transition-colors ${
+          !isEn
+            ? 'bg-primary-600 text-white'
+            : 'text-surface-400 hover:text-white hover:bg-white/5'
+        }`}
+      >
+        PT
+      </button>
+      <button
+        onClick={() => i18n.changeLanguage('en-US')}
+        className={`px-2.5 py-1.5 transition-colors ${
+          isEn
+            ? 'bg-primary-600 text-white'
+            : 'text-surface-400 hover:text-white hover:bg-white/5'
+        }`}
+      >
+        EN
+      </button>
+    </div>
+  );
+}
+
 export default function LandingNavbar() {
   const { t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
@@ -11,7 +41,6 @@ export default function LandingNavbar() {
   const NAV_LINKS = [
     { href: '#features', label: t('landing.navFeatures') },
     { href: '#how-it-works', label: t('landing.navHowItWorks') },
-    { href: '#investments', label: t('landing.navInvestments') },
     { href: '#ai-assistant', label: t('landing.navAiAssistant') },
     { href: '#security', label: t('landing.navSecurity') },
   ];
@@ -65,6 +94,7 @@ export default function LandingNavbar() {
 
           {/* Desktop buttons */}
           <div className="hidden md:flex items-center gap-3">
+            <LanguageToggle />
             <Link
               to="/login"
               className="px-4 py-2 text-sm font-medium text-surface-300 hover:text-white transition-colors rounded-lg border border-surface-600 hover:border-surface-500"
@@ -117,7 +147,10 @@ export default function LandingNavbar() {
               {link.label}
             </a>
           ))}
-          <div className="border-t border-surface-700 mt-4 pt-4 space-y-2">
+          <div className="border-t border-surface-700 mt-4 pt-4 space-y-3">
+            <div className="flex justify-center">
+              <LanguageToggle />
+            </div>
             <Link
               to="/login"
               className="block px-4 py-3 text-sm font-medium text-surface-300 hover:text-white rounded-lg border border-surface-600 text-center"

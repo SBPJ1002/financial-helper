@@ -14,7 +14,7 @@ interface UserRow {
   role: 'USER' | 'ADMIN';
   isActive: boolean;
   createdAt: string;
-  _count: { incomes: number; expenses: number; investments: number; chatMessages: number };
+  _count: { incomes: number; expenses: number; chatMessages: number };
 }
 
 interface UsersResponse {
@@ -93,7 +93,7 @@ export default function AdminUsers() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-xs text-surface-400">
-                    {user._count.incomes}i / {user._count.expenses}e / {user._count.investments}inv / {user._count.chatMessages}msg
+                    {user._count.incomes}i / {user._count.expenses}e / {user._count.chatMessages}msg
                   </td>
                   <td className="px-4 py-3 text-surface-400">
                     {new Date(user.createdAt).toLocaleDateString()}

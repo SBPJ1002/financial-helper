@@ -8,7 +8,7 @@ import api from '../../services/api';
 
 interface Metrics {
   users: { total: number; active: number };
-  data: { incomes: number; expenses: number; investments: number; chatMessages: number };
+  data: { incomes: number; expenses: number; chatMessages: number };
   activity: { sessionsLast7Days: number; messagesLast7Days: number };
   recentMetrics: Array<{ id: string; key: string; value: string; createdAt: string }>;
 }
@@ -55,10 +55,6 @@ export default function AdminDashboard() {
               <span className="font-medium">{metrics.data.expenses}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-surface-500">{t('admin.investments')}</span>
-              <span className="font-medium">{metrics.data.investments}</span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-surface-500">{t('admin.chatMessages')}</span>
               <span className="font-medium">{metrics.data.chatMessages}</span>
             </div>
@@ -72,11 +68,6 @@ export default function AdminDashboard() {
               className="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-50 dark:hover:bg-surface-700/50 transition-colors">
               <Users className="h-5 w-5 text-blue-500" />
               <span className="text-sm font-medium">{t('admin.userManagement')}</span>
-            </Link>
-            <Link to="/admin/rates"
-              className="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-50 dark:hover:bg-surface-700/50 transition-colors">
-              <BarChart3 className="h-5 w-5 text-green-500" />
-              <span className="text-sm font-medium">{t('admin.economicRates')}</span>
             </Link>
             <Link to="/admin/logs"
               className="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-50 dark:hover:bg-surface-700/50 transition-colors">

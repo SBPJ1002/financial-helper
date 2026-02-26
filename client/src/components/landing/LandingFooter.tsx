@@ -8,14 +8,12 @@ export default function LandingFooter() {
   const PLATFORM_LINKS = [
     { label: t('landing.footerDashboard'), to: '/register' },
     { label: t('landing.footerExpenses'), to: '/register' },
-    { label: t('landing.footerInvestments'), to: '/register' },
-    { label: t('landing.footerSimulator'), to: '/register' },
     { label: t('landing.footerAiAssistant'), to: '/register' },
   ];
 
   const RESOURCE_LINKS = [
     { label: t('landing.footerSecurity'), href: '#security' },
-    { label: t('landing.footerBcbApi'), href: '#investments' },
+    { label: t('landing.footerBcbApi'), href: '#features' },
     { label: t('landing.footerExportData'), href: '#features' },
   ];
 
@@ -97,9 +95,6 @@ export default function LandingFooter() {
         <div className="mt-12 pt-8 border-t border-surface-700/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-surface-500">
             &copy; {new Date().getFullYear()} {t('landing.footer')}
-          </p>
-          <p className="text-xs text-surface-500">
-            {t('landing.madeWith')}
           </p>
         </div>
       </div>

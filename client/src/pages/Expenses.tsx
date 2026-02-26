@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Download, DollarSign, ArrowUpCircle, ArrowDownCircle, Trash2, Edit2, ChevronLeft, ChevronRight, ArrowLeftRight, Settings, Check, X } from 'lucide-react';
+import { Plus, Search, Download, DollarSign, ArrowUpCircle, ArrowDownCircle, Trash2, Edit2, ChevronLeft, ChevronRight, ArrowLeftRight, Settings, Check, X, RefreshCw } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -10,6 +10,7 @@ import Badge from '../components/ui/Badge';
 import StatCard from '../components/ui/StatCard';
 import { useToast } from '../components/ui/Toast';
 import { useFinanceStore } from '../stores/useFinanceStore';
+import { useBankingStore } from '../stores/useBankingStore';
 import { useUserSettingsStore } from '../stores/useUserSettingsStore';
 import { formatCurrency, formatDate, getCurrentMonth, getMonthFromDate, formatMonthYearLong, navigateMonth } from '../utils/format';
 import { translateCategoryName } from '../utils/categoryTranslation';
@@ -63,6 +64,9 @@ export default function Expenses() {
     updateCategory, deleteCategory,
     fixedExpenses, variableExpenses,
   } = useFinanceStore();
+
+  const { importTransactions: importBankTransactions } = useBankingStore();
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [month, setMonth] = useState(getCurrentMonth);
   const isCurrentMonth = month === getCurrentMonth();
@@ -157,6 +161,23 @@ export default function Expenses() {
     toast(t('expenses.csvExported'));
   }
 
+  async function handleSyncOpenFinance() {
+    setIsSyncing(true);
+    try {
+      const result = await importBankTransactions('all');
+      if (result.expenses === 0 && result.incomes === 0) {
+        toast(t('expenses.syncUpToDate'));
+      } else {
+        toast(t('expenses.syncSuccess', { expenses: result.expenses, incomes: result.incomes }));
+        await Promise.all([fetchIncomes(), fetchExpenses()]);
+      }
+    } catch {
+      toast(t('expenses.syncError'));
+    } finally {
+      setIsSyncing(false);
+    }
+  }
+
   async function handleDeleteSingle() {
     if (!deleteTarget) return;
     if (deleteTarget.type === 'income') await deleteIncome(deleteTarget.id);
@@ -234,6 +255,10 @@ export default function Expenses() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold">{t('expenses.title')}</h1>
         <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={handleSyncOpenFinance} disabled={isSyncing}>
+            <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? t('expenses.syncing') : t('expenses.syncOpenFinance')}
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => setCategoryManagerModal(true)}>
             <Settings className="h-4 w-4" /> {t('expenses.manageCategories')}
           </Button>

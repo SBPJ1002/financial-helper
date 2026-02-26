@@ -1,5 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import { env } from '../config/env.js';
+import { StandardizationPipeline } from './standardization/index.js';
+import { ClassificationService } from './classification/index.js';
 
 const PLUGGY_API_URL = 'https://api.pluggy.ai';
 
@@ -29,7 +31,6 @@ async function getAccessToken(): Promise<string> {
 
   const data = await res.json();
   accessToken = data.apiKey;
-  // Cache for 2 hours
   tokenExpiresAt = Date.now() + 2 * 60 * 60 * 1000;
 
   return accessToken!;
@@ -63,188 +64,40 @@ export async function createConnectToken(userId: string): Promise<string> {
   return data.accessToken;
 }
 
-// --- Pluggy Investment Type Mapping ---
-
-interface PluggyInvestment {
-  id: string;
-  name: string;
-  type: string;       // FIXED_INCOME, MUTUAL_FUND, EQUITY, SECURITY, ETF, COE, OTHER
-  subtype: string | null; // TREASURY, CDB, LCI, LCA, STOCK, etc.
-  balance: number;
-  amount: number | null;
-  amountOriginal: number | null;
-  amountProfit: number | null;
-  rate: number | null;
-  rateType: string | null;     // SELIC, CDI, IPCA, etc.
-  fixedAnnualRate: number | null;
-  dueDate: string | null;
-  issuer: string | null;
-  issueDate: string | null;
-  purchaseDate: string | null;
-  status: string | null;       // ACTIVE, PENDING, TOTAL_WITHDRAWAL
-  code: string | null;
-  isin: string | null;
-  currencyCode: string;
-  date: string | null;
-  value: number | null;
-  quantity: number | null;
-  lastMonthRate: number | null;
-  annualRate: number | null;
-  lastTwelveMonthsRate: number | null;
-  institution: { name: string; number?: string } | null;
-}
-
-/** Map Pluggy subtype → our InvestmentType name */
-function mapPluggySubtype(type: string, subtype: string | null, name: string): string {
-  // Treasury bonds: detect specific type from name
-  if (subtype === 'TREASURY' || type === 'FIXED_INCOME' && /TESOURO|LFT|LTN|NTN/i.test(name)) {
-    if (/SELIC|LFT/i.test(name)) return 'Treasury Selic';
-    if (/IPCA|NTN[\s-]?B(?!1)/i.test(name)) return 'Treasury IPCA+';
-    if (/PREFIXADO|LTN|NTN[\s-]?F/i.test(name)) return 'Treasury Prefixed';
-    if (/RENDA\+?/i.test(name)) return 'Treasury Renda+';
-    if (/EDUCA\+?/i.test(name)) return 'Treasury Educa+';
-    return 'Treasury Selic'; // default treasury
-  }
-
-  // Direct subtype mapping
-  switch (subtype) {
-    case 'CDB': return 'CDB';
-    case 'LCI': return 'LCI';
-    case 'LCA': return 'LCA';
-    case 'CRI': return 'CRI';
-    case 'CRA': return 'CRA';
-    case 'DEBENTURES':
-    case 'CORPORATE_DEBT': return 'Debentures';
-    case 'LC': return 'CDB'; // Letra de Câmbio → treat like CDB
-    case 'STRUCTURED_NOTE': return 'COE';
-    case 'RETIREMENT': return 'Private Pension';
-    // Mutual funds subtypes
-    case 'INVESTMENT_FUND':
-    case 'MULTIMARKET_FUND':
-    case 'FIXED_INCOME_FUND':
-    case 'STOCK_FUND':
-    case 'ETF_FUND':
-    case 'OFFSHORE_FUND':
-    case 'FIP_FUND':
-    case 'EXCHANGE_FUND':
-    case 'FI_INFRA':
-    case 'FI_AGRO': return 'Investment Funds';
-    // Equity subtypes
-    case 'STOCK': return 'Stocks';
-    case 'ETF': return 'ETF';
-    case 'REAL_ESTATE_FUND': return 'FII';
-    case 'BDR': return 'BDR';
-    case 'DERIVATIVES':
-    case 'OPTION': return 'Derivatives';
-    default: break;
-  }
-
-  // Fallback by top-level type
-  switch (type) {
-    case 'FIXED_INCOME': return 'CDB';
-    case 'MUTUAL_FUND': return 'Investment Funds';
-    case 'EQUITY': return 'Stocks';
-    case 'SECURITY': return 'Private Pension';
-    case 'ETF': return 'ETF';
-    case 'COE': return 'COE';
-    default: return 'Other';
-  }
-}
-
-/** Map Pluggy rateType → our YieldType enum + build yield description */
-function mapPluggyYield(inv: PluggyInvestment, typeName: string): {
-  yieldType: string;
-  yieldRate: number | null;
-  yieldDescription: string;
-  treasuryTitle?: string;
-  treasuryIndex?: string;
-} {
-  const rate = inv.rate;
-  const fixedRate = inv.fixedAnnualRate;
-
-  // Treasury-specific fields
-  const isTreasury = typeName.startsWith('Treasury');
-  const treasuryTitle = isTreasury ? typeName.replace('Treasury ', 'Tesouro ') : undefined;
-
-  switch (inv.rateType) {
-    case 'SELIC':
-      return {
-        yieldType: 'SELIC',
-        yieldRate: rate,
-        yieldDescription: rate ? `SELIC + ${rate}%` : 'SELIC',
-        treasuryTitle,
-        treasuryIndex: 'SELIC',
-      };
-    case 'CDI':
-      return {
-        yieldType: 'CDI_PERCENTAGE',
-        yieldRate: rate ?? 100,
-        yieldDescription: `${rate ?? 100}% CDI`,
-      };
-    case 'IPCA':
-      return {
-        yieldType: 'IPCA_PLUS',
-        yieldRate: fixedRate ?? rate ?? 6,
-        yieldDescription: `IPCA + ${fixedRate ?? rate ?? 6}%`,
-        treasuryTitle,
-        treasuryIndex: 'IPCA',
-      };
-    default:
-      // If has a fixed annual rate, treat as prefixed
-      if (fixedRate) {
-        return {
-          yieldType: 'PREFIXED',
-          yieldRate: fixedRate,
-          yieldDescription: `${fixedRate}% a.a.`,
-          treasuryTitle,
-        };
-      }
-      // Fallback based on our known type defaults
-      if (typeName === 'Savings') {
-        return { yieldType: 'POUPANCA', yieldRate: null, yieldDescription: 'POUPANCA' };
-      }
-      if (isTreasury && /Selic/i.test(typeName)) {
-        return { yieldType: 'SELIC', yieldRate: null, yieldDescription: 'SELIC', treasuryTitle, treasuryIndex: 'SELIC' };
-      }
-      if (isTreasury && /IPCA/i.test(typeName)) {
-        return { yieldType: 'IPCA_PLUS', yieldRate: 6, yieldDescription: 'IPCA + 6%', treasuryTitle, treasuryIndex: 'IPCA' };
-      }
-      if (['Stocks', 'FII', 'ETF', 'BDR', 'Derivatives'].includes(typeName)) {
-        return { yieldType: 'VARIABLE', yieldRate: null, yieldDescription: 'Variable' };
-      }
-      return { yieldType: 'CDI_PERCENTAGE', yieldRate: 100, yieldDescription: '100% CDI' };
-  }
-}
-
-/** Map our type name to InvestmentCategory enum */
-function getInvestmentCategory(typeName: string): 'FIXED_INCOME' | 'VARIABLE_INCOME' | 'OTHER' {
-  if (typeName.startsWith('Treasury') || ['CDB', 'LCI', 'LCA', 'CRI', 'CRA', 'Debentures', 'COE', 'Savings'].includes(typeName)) {
-    return 'FIXED_INCOME';
-  }
-  if (['Stocks', 'FII', 'ETF', 'BDR', 'Derivatives'].includes(typeName)) {
-    return 'VARIABLE_INCOME';
-  }
-  return 'OTHER';
-}
-
 export interface SyncResult {
-  investments: { synced: number; skipped: number };
   transactions: { synced: number; newCount: number };
   accounts: number;
+  warnings?: string[];
 }
 
-/**
- * Request Pluggy to refresh data from the financial institution,
- * then poll until the item status is no longer UPDATING.
- */
 async function refreshPluggyItem(pluggyItemId: string): Promise<void> {
-  // Trigger update at Pluggy
-  await pluggyFetch(`/items/${pluggyItemId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({}),
-  });
+  const currentItem = await pluggyFetch(`/items/${pluggyItemId}`);
 
-  // Poll until update completes (max ~60s)
+  if (currentItem.status === 'UPDATING') {
+    console.log('Pluggy item already updating, waiting...');
+  } else {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const statusDetail = currentItem.statusDetail || {};
+    const recentlyUpdated = Object.values(statusDetail).some(
+      (detail: any) => detail?.lastUpdatedAt && new Date(detail.lastUpdatedAt) > oneHourAgo
+    );
+
+    if (recentlyUpdated) {
+      console.log('Pluggy item was recently updated, skipping refresh to preserve rate limits');
+      return;
+    }
+
+    try {
+      await pluggyFetch(`/items/${pluggyItemId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({}),
+      });
+    } catch (err: any) {
+      console.warn(`Pluggy refresh request failed: ${err.message} — proceeding with cached data`);
+      return;
+    }
+  }
+
   const maxAttempts = 20;
   const delayMs = 3000;
   for (let i = 0; i < maxAttempts; i++) {
@@ -254,6 +107,18 @@ async function refreshPluggyItem(pluggyItemId: string): Promise<void> {
       if (item.status === 'UPDATE_ERROR') {
         console.warn(`Pluggy item ${pluggyItemId} update failed: ${item.error?.message || 'unknown'}`);
       }
+      if (item.executionStatus === 'PARTIAL_SUCCESS') {
+        const warnings: string[] = [];
+        for (const [product, detail] of Object.entries(item.statusDetail || {})) {
+          const d = detail as any;
+          if (d?.warnings?.length > 0) {
+            warnings.push(`${product}: ${d.warnings.map((w: any) => w.message).join('; ')}`);
+          }
+        }
+        if (warnings.length > 0) {
+          console.warn(`Pluggy partial success — ${warnings.join(' | ')}`);
+        }
+      }
       return;
     }
   }
@@ -261,45 +126,97 @@ async function refreshPluggyItem(pluggyItemId: string): Promise<void> {
 }
 
 export async function syncConnection(connectionId: string): Promise<SyncResult> {
-  const connection = await prisma.bankConnection.findUnique({
+  const connection = await prisma.pluggyItem.findUnique({
     where: { id: connectionId },
-    include: { accounts: true },
+    include: { accounts: { include: { stdAccount: true } } },
   });
 
   if (!connection) throw new Error('Connection not found');
 
-  // --- Ask Pluggy to refresh data from the institution ---
+  const syncWarnings: string[] = [];
+
+  // Ask Pluggy to refresh data from the institution
   await refreshPluggyItem(connection.pluggyItemId);
 
-  // --- Sync Investments from Pluggy /investments endpoint ---
-  const investmentResult = await syncInvestments(connection.pluggyItemId, connection.userId, connection.connectorName);
+  // Check item status for warnings
+  const itemStatus = await pluggyFetch(`/items/${connection.pluggyItemId}`);
+  if (itemStatus.statusDetail) {
+    for (const [product, detail] of Object.entries(itemStatus.statusDetail || {})) {
+      const d = detail as any;
+      if (d?.warnings?.length > 0) {
+        for (const w of d.warnings) {
+          syncWarnings.push(w.message || `${product}: warning`);
+          console.warn(`Pluggy warning [${product}]:`, w.message);
+        }
+      }
+    }
+  }
 
-  // --- Sync Accounts & Transactions ---
+  // Sync Accounts & Transactions (Raw Layer)
   const accountsData = await pluggyFetch(`/accounts?itemId=${connection.pluggyItemId}`);
   const accounts = accountsData.results || [];
+  console.log(`Pluggy returned ${accounts.length} accounts (types: ${accounts.map((a: any) => a.type).join(', ') || 'none'})`);
   let txSynced = 0;
   let txNew = 0;
 
   for (const acc of accounts) {
-    const bankAccount = await prisma.bankAccount.upsert({
+    // Upsert raw PluggyAccount
+    const pluggyAccount = await prisma.pluggyAccount.upsert({
       where: { pluggyAccountId: acc.id },
       update: {
         name: acc.name,
         type: acc.type,
+        subtype: acc.subtype || null,
+        number: acc.number || null,
         balance: acc.balance || 0,
         currencyCode: acc.currencyCode || 'BRL',
+        creditLimit: acc.creditData?.creditLimit || null,
+        availableCreditLimit: acc.creditData?.availableCreditLimit || null,
+        marketingName: acc.marketingName || null,
+        rawJson: JSON.stringify(acc),
       },
       create: {
-        bankConnectionId: connection.id,
+        pluggyItemId: connection.id,
         pluggyAccountId: acc.id,
         name: acc.name,
         type: acc.type,
+        subtype: acc.subtype || null,
+        number: acc.number || null,
         balance: acc.balance || 0,
         currencyCode: acc.currencyCode || 'BRL',
+        creditLimit: acc.creditData?.creditLimit || null,
+        availableCreditLimit: acc.creditData?.availableCreditLimit || null,
+        marketingName: acc.marketingName || null,
+        rawJson: JSON.stringify(acc),
       },
     });
 
-    // Fetch transactions for this account (last 90 days) with pagination
+    // Ensure StdAccount exists
+    const sourceType = acc.type === 'CREDIT' ? 'CREDIT' : acc.type === 'INVESTMENT' ? 'INVESTMENT' : 'BANK';
+    await prisma.stdAccount.upsert({
+      where: { pluggyAccountId: pluggyAccount.pluggyAccountId },
+      update: {
+        bankName: connection.connectorName,
+        accountLabel: acc.name,
+        currentBalance: acc.balance || 0,
+        currencyCode: acc.currencyCode || 'BRL',
+        creditLimit: acc.creditData?.creditLimit || null,
+        sourceType: sourceType as any,
+      },
+      create: {
+        pluggyAccountId: pluggyAccount.pluggyAccountId,
+        userId: connection.userId,
+        sourceType: sourceType as any,
+        bankName: connection.connectorName,
+        accountLabel: acc.name,
+        currentBalance: acc.balance || 0,
+        currencyCode: acc.currencyCode || 'BRL',
+        creditLimit: acc.creditData?.creditLimit || null,
+        accountNumberMasked: acc.number ? `****${acc.number.slice(-4)}` : null,
+      },
+    });
+
+    // Fetch transactions (last 90 days) with pagination
     const since = new Date();
     since.setDate(since.getDate() - 90);
     let txPage = 1;
@@ -313,49 +230,73 @@ export async function syncConnection(connectionId: string): Promise<SyncResult> 
       const transactions = txData.results || [];
 
       for (const tx of transactions) {
-        const installmentNumber = tx.creditCardMetadata?.installmentNumber ?? null;
-        const totalInstallments = tx.creditCardMetadata?.totalInstallments ?? null;
-        const operationType = tx.operationType ?? null;
-
-        // Generate a group ID for installment purchases (same description + total amount)
-        let installmentGroupId: string | null = null;
-        if (totalInstallments && totalInstallments > 1) {
-          const normalized = (tx.description || '').toLowerCase().replace(/\s+/g, '_');
-          const totalAmount = Math.abs(tx.amount * totalInstallments).toFixed(2);
-          installmentGroupId = `${bankAccount.id}_${normalized}_${totalAmount}_${totalInstallments}x`;
-        }
-
         // Check if this transaction already exists
-        const existing = await prisma.bankTransaction.findUnique({
+        const existing = await prisma.pluggyTransaction.findUnique({
           where: { pluggyTxId: tx.id },
           select: { id: true },
         });
 
-        await prisma.bankTransaction.upsert({
+        // Upsert raw PluggyTransaction (store ALL fields)
+        await prisma.pluggyTransaction.upsert({
           where: { pluggyTxId: tx.id },
           update: {
             description: tx.description || 'No description',
+            descriptionRaw: tx.descriptionRaw || null,
             amount: tx.amount,
             date: new Date(tx.date),
             type: tx.type,
             category: tx.category || null,
-            operationType,
-            installmentNumber,
-            totalInstallments,
-            installmentGroupId,
+            categoryId: tx.categoryId || null,
+            operationType: tx.operationType || null,
+            currencyCode: tx.currencyCode || 'BRL',
+            installmentNumber: tx.creditCardMetadata?.installmentNumber ?? null,
+            totalInstallments: tx.creditCardMetadata?.totalInstallments ?? null,
+            cardNumber: tx.creditCardMetadata?.cardNumber ?? null,
+            billDate: tx.creditCardMetadata?.billDate ? new Date(tx.creditCardMetadata.billDate) : null,
+            payerName: tx.payer?.name || null,
+            payerDocType: tx.payer?.documentNumber?.type || null,
+            payerDocValue: tx.payer?.documentNumber?.value || null,
+            receiverName: tx.receiver?.name || null,
+            receiverDocType: tx.receiver?.documentNumber?.type || null,
+            receiverDocValue: tx.receiver?.documentNumber?.value || null,
+            merchantName: tx.merchant?.name || null,
+            merchantBusinessName: tx.merchant?.businessName || null,
+            merchantCnpj: tx.merchant?.cnpj || null,
+            merchantCategoryCode: tx.merchant?.categoryCode || null,
+            paymentMethod: tx.paymentMethod || null,
+            rawJson: JSON.stringify(tx),
+            // Mark as unprocessed so standardization pipeline picks it up
+            isProcessed: existing ? undefined : false,
           },
           create: {
-            bankAccountId: bankAccount.id,
+            pluggyAccountId: pluggyAccount.id,
             pluggyTxId: tx.id,
             description: tx.description || 'No description',
+            descriptionRaw: tx.descriptionRaw || null,
             amount: tx.amount,
             date: new Date(tx.date),
             type: tx.type,
             category: tx.category || null,
-            operationType,
-            installmentNumber,
-            totalInstallments,
-            installmentGroupId,
+            categoryId: tx.categoryId || null,
+            operationType: tx.operationType || null,
+            currencyCode: tx.currencyCode || 'BRL',
+            installmentNumber: tx.creditCardMetadata?.installmentNumber ?? null,
+            totalInstallments: tx.creditCardMetadata?.totalInstallments ?? null,
+            cardNumber: tx.creditCardMetadata?.cardNumber ?? null,
+            billDate: tx.creditCardMetadata?.billDate ? new Date(tx.creditCardMetadata.billDate) : null,
+            payerName: tx.payer?.name || null,
+            payerDocType: tx.payer?.documentNumber?.type || null,
+            payerDocValue: tx.payer?.documentNumber?.value || null,
+            receiverName: tx.receiver?.name || null,
+            receiverDocType: tx.receiver?.documentNumber?.type || null,
+            receiverDocValue: tx.receiver?.documentNumber?.value || null,
+            merchantName: tx.merchant?.name || null,
+            merchantBusinessName: tx.merchant?.businessName || null,
+            merchantCnpj: tx.merchant?.cnpj || null,
+            merchantCategoryCode: tx.merchant?.categoryCode || null,
+            paymentMethod: tx.paymentMethod || null,
+            rawJson: JSON.stringify(tx),
+            isProcessed: false,
           },
         });
 
@@ -367,149 +308,61 @@ export async function syncConnection(connectionId: string): Promise<SyncResult> 
     }
   }
 
-  await prisma.bankConnection.update({
+  // Update PluggyItem sync metadata
+  await prisma.pluggyItem.update({
     where: { id: connectionId },
-    data: { lastSyncAt: new Date(), status: 'ACTIVE' },
+    data: {
+      lastSyncedAt: new Date(),
+      status: 'ACTIVE',
+      syncCount: { increment: 1 },
+      executionStatus: itemStatus.executionStatus || null,
+    },
   });
 
-  return {
-    investments: investmentResult,
-    transactions: { synced: txSynced, newCount: txNew },
-    accounts: accounts.length,
-  };
-}
+  // Run standardization pipeline on new transactions
+  if (txNew > 0) {
+    try {
+      const pipeline = new StandardizationPipeline(prisma);
+      const stdResult = await pipeline.processAll(connection.userId);
+      console.log(`Standardization: ${stdResult.processed} processed, ${stdResult.errors} errors`);
 
-/**
- * Sync investments from Pluggy's /investments endpoint.
- * This gets the full portfolio snapshot (not transactions).
- */
-async function syncInvestments(
-  pluggyItemId: string,
-  userId: string,
-  connectorName: string,
-): Promise<{ synced: number; skipped: number }> {
-  let page = 1;
-  let totalPages = 1;
-  let synced = 0;
-  let skipped = 0;
-
-  // Pre-load investment types for mapping
-  const investmentTypes = await prisma.investmentType.findMany();
-  const typeByName = new Map(investmentTypes.map(t => [t.name, t.id]));
-
-  while (page <= totalPages) {
-    const data = await pluggyFetch(`/investments?itemId=${pluggyItemId}&page=${page}`);
-    totalPages = data.totalPages || 1;
-    const investments: PluggyInvestment[] = data.results || [];
-
-    for (const inv of investments) {
+      // Run classification on new standardized transactions
       try {
-        // Skip fully withdrawn investments
-        if (inv.status === 'TOTAL_WITHDRAWAL') {
-          skipped++;
-          continue;
-        }
-
-        // Map Pluggy type → our InvestmentType name
-        const typeName = mapPluggySubtype(inv.type, inv.subtype, inv.name);
-
-        // Ensure InvestmentType exists (auto-create if not)
-        let typeId = typeByName.get(typeName);
-        if (!typeId) {
-          const category = getInvestmentCategory(typeName);
-          const created = await prisma.investmentType.upsert({
-            where: { name: typeName },
-            update: {},
-            create: { name: typeName, category, isDefault: true },
-          });
-          typeId = created.id;
-          typeByName.set(typeName, typeId);
-        }
-
-        // Map yield info from Pluggy's rate data
-        const yieldInfo = mapPluggyYield(inv, typeName);
-
-        // Determine dates
-        const appDate = inv.purchaseDate || inv.issueDate || inv.date || new Date().toISOString();
-        const maturityDate = inv.dueDate ? new Date(inv.dueDate) : null;
-
-        // Variable income fields (stocks, FIIs, ETFs, BDRs)
-        const isVariableIncome = ['Stocks', 'FII', 'ETF', 'BDR', 'Derivatives'].includes(typeName);
-        const quantity = isVariableIncome ? inv.quantity : null;
-        const averagePrice = isVariableIncome && inv.quantity && inv.amountOriginal
-          ? inv.amountOriginal / inv.quantity
-          : null;
-
-        // Calculate amountInvested: prefer amountOriginal, then derive from balance - profit
-        const amountInvested = inv.amountOriginal
-          ?? (inv.amountProfit != null ? inv.balance - inv.amountProfit : null)
-          ?? inv.amount
-          ?? Math.abs(inv.balance);
-
-        // Upsert by pluggyInvestmentId (dedup)
-        await prisma.investment.upsert({
-          where: { pluggyInvestmentId: inv.id },
-          update: {
-            name: inv.name,
-            investmentTypeId: typeId,
-            amountInvested,
-            currentValue: inv.balance,
-            maturityDate,
-            yieldDescription: yieldInfo.yieldDescription,
-            yieldType: yieldInfo.yieldType as any,
-            yieldRate: yieldInfo.yieldRate,
-            institution: inv.institution?.name || connectorName,
-            status: inv.status === 'ACTIVE' ? 'ACTIVE' : 'ACTIVE',
-            quantity,
-            averagePrice,
-            treasuryTitle: yieldInfo.treasuryTitle,
-            treasuryIndex: yieldInfo.treasuryIndex,
-            amountProfit: inv.amountProfit,
-            lastMonthRate: inv.lastMonthRate,
-            annualRate: inv.annualRate,
-          },
-          create: {
-            userId,
-            pluggyInvestmentId: inv.id,
-            name: inv.name,
-            investmentTypeId: typeId,
-            amountInvested,
-            currentValue: inv.balance,
-            applicationDate: new Date(appDate),
-            maturityDate,
-            yieldDescription: yieldInfo.yieldDescription,
-            yieldType: yieldInfo.yieldType as any,
-            yieldRate: yieldInfo.yieldRate,
-            institution: inv.institution?.name || connectorName,
-            status: 'ACTIVE',
-            quantity,
-            averagePrice,
-            treasuryTitle: yieldInfo.treasuryTitle,
-            treasuryIndex: yieldInfo.treasuryIndex,
-            amountProfit: inv.amountProfit,
-            lastMonthRate: inv.lastMonthRate,
-            annualRate: inv.annualRate,
-          },
-        });
-
-        synced++;
-      } catch (err: any) {
-        console.error(`Failed to sync investment ${inv.id} (${inv.name}):`, err.message);
-        skipped++;
+        const classifier = new ClassificationService();
+        const importResult = await classifier.processNewTransactions(connection.userId, 'all');
+        console.log(
+          `Auto-imported: ${importResult.expenses} expenses, ${importResult.incomes} incomes, ${importResult.skipped} skipped`,
+        );
+      } catch (err) {
+        console.error('Classification/import failed:', err);
+        syncWarnings.push('Falha ao importar transações como despesas/receitas');
       }
+    } catch (err) {
+      console.error('Standardization pipeline failed:', err);
+      syncWarnings.push('Falha na padronização de transações');
     }
-
-    page++;
   }
 
-  console.log(`Investments synced: ${synced}, skipped: ${skipped}`);
-  return { synced, skipped };
+  if (accounts.length === 0) {
+    syncWarnings.push('Nenhuma conta bancária retornada pela instituição');
+  }
+  if (txSynced === 0 && accounts.length > 0) {
+    syncWarnings.push('Nenhuma transação retornada — possível rate limit do Open Finance');
+  }
+
+  console.log(`Sync completed: ${accounts.length} accounts, ${txSynced} transactions (${txNew} new)`);
+
+  return {
+    transactions: { synced: txSynced, newCount: txNew },
+    accounts: accounts.length,
+    warnings: syncWarnings.length > 0 ? syncWarnings : undefined,
+  };
 }
 
 export async function syncAllConnections(): Promise<void> {
   if (!isPluggyEnabled()) return;
 
-  const connections = await prisma.bankConnection.findMany({
+  const connections = await prisma.pluggyItem.findMany({
     where: { status: 'ACTIVE' },
   });
 
@@ -519,7 +372,7 @@ export async function syncAllConnections(): Promise<void> {
       console.log(`Synced connection: ${conn.connectorName}`);
     } catch (err) {
       console.error(`Failed to sync connection ${conn.id}:`, err);
-      await prisma.bankConnection.update({
+      await prisma.pluggyItem.update({
         where: { id: conn.id },
         data: { status: 'ERROR' },
       });

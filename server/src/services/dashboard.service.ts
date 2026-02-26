@@ -29,16 +29,20 @@ export async function getSummary(userId: string, month: string) {
       userId,
       type: 'FIXED',
       OR: [
-        { bankTransactionId: null },
+        { stdTransactionId: null },
         { date: { gte: startDate, lte: endDate } },
       ],
     },
-    include: { category: true, history: true },
+    include: {
+      category: true,
+      history: true,
+      stdTransaction: { select: { stdAccountId: true, stdAccount: { select: { sourceType: true } } } },
+    },
   });
   // Deduplicate manual fixed by description (only count once per month)
   const seenManualFixed = new Set<string>();
   const dedupedFixed = fixedExpenses.filter(e => {
-    if (e.bankTransactionId) return true;
+    if (e.stdTransactionId) return true;
     const key = e.description;
     if (seenManualFixed.has(key)) return false;
     seenManualFixed.add(key);
@@ -60,7 +64,10 @@ export async function getSummary(userId: string, month: string) {
       type: 'VARIABLE',
       date: { gte: startDate, lte: endDate },
     },
-    include: { category: true },
+    include: {
+      category: true,
+      stdTransaction: { select: { stdAccountId: true, stdAccount: { select: { sourceType: true } } } },
+    },
   });
   const totalVariable = variableExpenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -97,6 +104,38 @@ export async function getSummary(userId: string, month: string) {
       emoji: e.category.emoji,
     }));
 
+  // Source breakdown: fixed/variable by bank vs credit card vs manual
+  const fixedBySource = { bank: 0, creditCard: 0, manual: 0 };
+  const variableBySource = { bank: 0, creditCard: 0, manual: 0 };
+
+  for (const exp of allExpenses) {
+    const target = exp.type === 'FIXED' ? fixedBySource : variableBySource;
+    if (!exp.stdTransactionId) {
+      target.manual += exp.amount;
+    } else {
+      const sourceType = exp.stdTransaction?.stdAccount?.sourceType;
+      if (sourceType === 'CREDIT') target.creditCard += exp.amount;
+      else target.bank += exp.amount;
+    }
+  }
+
+  // Invoice total
+  const invoicePayments = await prisma.invoicePayment.findMany({
+    where: { userId, month },
+  });
+  const invoiceTotal = invoicePayments.reduce((sum, ip) => sum + ip.amount, 0);
+
+  // Declaration match rate
+  const activeDeclarations = await prisma.fixedExpenseDeclaration.count({
+    where: { userId, isActive: true },
+  });
+  const matchedDeclarations = await prisma.declarationMatch.count({
+    where: { month, declaration: { userId, isActive: true } },
+  });
+  const declarationMatchRate = activeDeclarations > 0
+    ? Math.round((matchedDeclarations / activeDeclarations) * 100) / 100
+    : 0;
+
   return {
     month,
     totalIncome,
@@ -107,5 +146,9 @@ export async function getSummary(userId: string, month: string) {
     savingsRate: Math.round(savingsRate * 100) / 100,
     categoryBreakdown,
     topExpenses,
+    fixedBySource,
+    variableBySource,
+    invoiceTotal,
+    declarationMatchRate,
   };
 }

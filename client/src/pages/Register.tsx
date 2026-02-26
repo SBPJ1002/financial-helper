@@ -143,7 +143,7 @@ export default function Register() {
         city: city || undefined,
         state: state || undefined,
       });
-      navigate('/dashboard', { replace: true });
+      navigate('/onboarding', { replace: true });
     } catch (err) {
       const message = (err as { response?: { data?: { error?: string } } }).response?.data?.error
         || t('auth.registerFailed');

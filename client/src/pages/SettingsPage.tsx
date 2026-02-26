@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Settings, Moon, Sun, Monitor, Info, Trash2, User, Palette,
-  Bot, Bell, Database, Eye, EyeOff, ExternalLink, CheckCircle, XCircle, Loader2,
-  Landmark, Globe,
+  Bot, Bell, Database, Wallet, Loader2, Crown, Sparkles, Lock,
+  ClipboardCheck,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -15,91 +14,32 @@ import { useToast } from '../components/ui/Toast';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { useUserSettingsStore } from '../stores/useUserSettingsStore';
 import { useChatStore } from '../stores/useChatStore';
+import { useOnboardingStore, type FinancialProfile } from '../stores/useOnboardingStore';
 import api from '../services/api';
 import { useAuthStore } from '../stores/useAuthStore';
-import { useBankingStore } from '../stores/useBankingStore';
-import { LANGUAGES, CURRENCIES } from '../i18n';
+import { CURRENCIES } from '../i18n';
 import { getIntlLocale } from '../i18n';
-
-const ACCENT_COLORS = [
-  { value: 'blue', label: 'Blue', class: 'bg-blue-500' },
-  { value: 'purple', label: 'Purple', class: 'bg-purple-500' },
-  { value: 'green', label: 'Green', class: 'bg-green-500' },
-  { value: 'red', label: 'Red', class: 'bg-red-500' },
-  { value: 'orange', label: 'Orange', class: 'bg-orange-500' },
-  { value: 'pink', label: 'Pink', class: 'bg-pink-500' },
-  { value: 'teal', label: 'Teal', class: 'bg-teal-500' },
-  { value: 'indigo', label: 'Indigo', class: 'bg-indigo-500' },
-];
+import DeclarationList from '../components/declarations/DeclarationList';
 
 export default function SettingsPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { theme, toggleTheme } = useSettingsStore();
-  const { settings, fetchSettings, updateSettings, testAiConnection } = useUserSettingsStore();
+  const { settings, fetchSettings, updateSettings } = useUserSettingsStore();
   const { clearHistory } = useChatStore();
   const { user } = useAuthStore();
-  const { isAvailable: bankingAvailable, connections, checkAvailability, fetchConnections } = useBankingStore();
-  const navigate = useNavigate();
 
   const [clearChatConfirm, setClearChatConfirm] = useState(false);
   const [activeSection, setActiveSection] = useState('profile');
 
-  // AI form state
-  const [aiApiKey, setAiApiKey] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-  const [detectedModel, setDetectedModel] = useState<string | null>(null);
-
   useEffect(() => {
     fetchSettings();
-    checkAvailability();
-    fetchConnections();
-  }, [fetchSettings, checkAvailability, fetchConnections]);
-
-  useEffect(() => {
-    if (settings) {
-      setAiApiKey(settings.aiApiKey || '');
-    }
-  }, [settings]);
-
-  async function handleSaveAi() {
-    try {
-      await updateSettings({
-        aiProvider: 'google',
-        aiApiKey: aiApiKey === '••••••••' ? undefined : aiApiKey,
-        aiModel: detectedModel || 'auto',
-      } as any);
-      toast(t('settings.aiSaved'));
-    } catch {
-      toast(t('settings.aiSaveFailed'));
-    }
-  }
-
-  async function handleTestConnection() {
-    if (!aiApiKey || aiApiKey === '••••••••') return;
-    setTestStatus('testing');
-    setDetectedModel(null);
-    try {
-      const result = await testAiConnection('google', aiApiKey, 'auto');
-      setTestStatus(result.success ? 'success' : 'error');
-      if (result.model) {
-        setDetectedModel(result.model);
-      }
-    } catch {
-      setTestStatus('error');
-    }
-  }
+  }, [fetchSettings]);
 
   function handleClearChat() {
     clearHistory();
     toast(t('settings.chatCleared'));
     setClearChatConfirm(false);
-  }
-
-  async function handleLanguageChange(lang: string) {
-    await updateSettings({ language: lang } as any);
-    i18n.changeLanguage(lang);
   }
 
   async function handleCurrencyChange(currency: string) {
@@ -111,12 +51,12 @@ export default function SettingsPage() {
   }
 
   const sections = [
-    { id: 'profile', label: t('settings.profile'), icon: User },
+    { id: 'profile', label: t('settings.profileAndFinancial'), icon: User },
     { id: 'appearance', label: t('settings.appearance'), icon: Palette },
-    { id: 'language', label: t('settings.languageCurrency'), icon: Globe },
+    { id: 'currency', label: t('settings.currencySection'), icon: Wallet },
     { id: 'ai', label: t('settings.ai'), icon: Bot },
-    { id: 'banking', label: t('settings.banking'), icon: Landmark },
     { id: 'notifications', label: t('settings.notifications'), icon: Bell },
+    { id: 'declarations', label: t('settings.declarations'), icon: ClipboardCheck },
     { id: 'data', label: t('settings.data'), icon: Database },
     { id: 'about', label: t('settings.about'), icon: Info },
   ];
@@ -144,74 +84,89 @@ export default function SettingsPage() {
 
         {/* Content */}
         <div className="flex-1 max-w-2xl space-y-6">
-          {/* Profile */}
+          {/* Profile + Financial Profile (merged) */}
           {activeSection === 'profile' && (
-            <Card>
-              <h2 className="text-lg font-semibold mb-4">{t('settings.profile')}</h2>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-surface-500">{t('settings.profileName')}</span><span className="font-medium">{user?.fullName}</span></div>
-                <div className="flex justify-between"><span className="text-surface-500">{t('settings.profileEmail')}</span><span className="font-medium">{user?.email}</span></div>
-                <div className="flex justify-between"><span className="text-surface-500">{t('settings.profileRole')}</span><span className="font-medium">{user?.role}</span></div>
-                <div className="flex justify-between"><span className="text-surface-500">{t('settings.memberSince')}</span><span className="font-medium">{user?.createdAt ? new Date(user.createdAt).toLocaleDateString(getIntlLocale(settings?.language || 'pt-BR')) : '—'}</span></div>
-              </div>
-            </Card>
+            <>
+              <Card>
+                <h2 className="text-lg font-semibold mb-4">{t('settings.profile')}</h2>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between"><span className="text-surface-500">{t('settings.profileName')}</span><span className="font-medium">{user?.fullName}</span></div>
+                  <div className="flex justify-between"><span className="text-surface-500">{t('settings.profileEmail')}</span><span className="font-medium">{user?.email}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-surface-500">{t('settings.plan')}</span>
+                    <Badge variant="success">
+                      {user?.plan === 'AI_AGENT' ? t('settings.planAiAgent') : user?.plan === 'FULL' ? t('settings.planInvestments') : t('settings.planFree')}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between"><span className="text-surface-500">{t('settings.memberSince')}</span><span className="font-medium">{user?.createdAt ? new Date(user.createdAt).toLocaleDateString(getIntlLocale(settings?.language || 'pt-BR')) : '—'}</span></div>
+                </div>
+              </Card>
+
+              {/* Plan tiers */}
+              <Card>
+                <h2 className="text-lg font-semibold mb-1">{t('settings.planTitle')}</h2>
+                <p className="text-xs text-surface-500 mb-4">{t('settings.planDesc')}</p>
+                <div className="space-y-3">
+                  {/* Free tier */}
+                  <div className={`p-4 rounded-xl ${user?.plan === 'FREE' || !user?.plan ? 'border-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border border-surface-200 dark:border-surface-600'}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Crown className="h-4 w-4 text-primary-500" />
+                      <span className={`text-sm font-semibold ${user?.plan === 'FREE' || !user?.plan ? 'text-primary-600 dark:text-primary-400' : 'text-surface-900 dark:text-white'}`}>{t('settings.planFree')}</span>
+                      {(user?.plan === 'FREE' || !user?.plan) && <Badge variant="success" className="ml-auto">{t('settings.planCurrent')}</Badge>}
+                    </div>
+                    <p className="text-xs text-surface-500">{t('settings.planFreeDesc')}</p>
+                  </div>
+
+                  {/* AI Agent tier */}
+                  <div className={`p-4 rounded-xl ${user?.plan === 'AI_AGENT' ? 'border-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border border-surface-200 dark:border-surface-600 hover:border-surface-300 dark:hover:border-surface-500 transition-colors'}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sparkles className="h-4 w-4 text-amber-500" />
+                      <span className={`text-sm font-semibold ${user?.plan === 'AI_AGENT' ? 'text-primary-600 dark:text-primary-400' : 'text-surface-900 dark:text-white'}`}>{t('settings.planAiAgent')}</span>
+                      {user?.plan === 'AI_AGENT' && <Badge variant="success" className="ml-auto">{t('settings.planCurrent')}</Badge>}
+                    </div>
+                    <p className="text-xs text-surface-500">{t('settings.planAiAgentDesc')}</p>
+                  </div>
+
+                  {/* Investments tier (coming soon) */}
+                  <div className={`p-4 rounded-xl ${user?.plan === 'FULL' ? 'border-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border border-surface-200 dark:border-surface-600 opacity-60'}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Lock className="h-4 w-4 text-surface-400" />
+                      <span className={`text-sm font-semibold ${user?.plan === 'FULL' ? 'text-primary-600 dark:text-primary-400' : 'text-surface-900 dark:text-white'}`}>{t('settings.planInvestments')}</span>
+                      {user?.plan === 'FULL' ? <Badge variant="success" className="ml-auto">{t('settings.planCurrent')}</Badge> : <Badge variant="default" className="ml-auto">{t('settings.planComingSoon')}</Badge>}
+                    </div>
+                    <p className="text-xs text-surface-500">{t('settings.planInvestmentsDesc')}</p>
+                  </div>
+                </div>
+              </Card>
+
+              <FinancialProfileSection />
+            </>
           )}
 
           {/* Appearance */}
           {activeSection === 'appearance' && (
-            <>
-              <Card>
-                <h2 className="text-lg font-semibold mb-4">{t('settings.theme')}</h2>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { value: 'dark', icon: Moon, label: t('settings.dark') },
-                    { value: 'light', icon: Sun, label: t('settings.light') },
-                    { value: 'system', icon: Monitor, label: t('settings.system') },
-                  ].map(opt => (
-                    <button key={opt.value} onClick={() => { if (opt.value !== 'system') toggleTheme(); }}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors
-                        ${theme === opt.value ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-surface-200 dark:border-surface-700 hover:border-surface-400'}`}>
-                      <opt.icon className="h-6 w-6" />
-                      <span className="text-sm font-medium">{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </Card>
-
-              <Card>
-                <h2 className="text-lg font-semibold mb-4">{t('settings.accentColor')}</h2>
-                <div className="flex flex-wrap gap-3">
-                  {ACCENT_COLORS.map(c => (
-                    <button key={c.value} onClick={() => updateSettings({ accentColor: c.value } as any).then(() => toast(`Accent: ${c.label}`))}
-                      className={`w-10 h-10 rounded-full ${c.class} transition-transform hover:scale-110
-                        ${settings?.accentColor === c.value ? 'ring-2 ring-offset-2 ring-primary-500 dark:ring-offset-surface-800' : ''}`}
-                      title={c.label} />
-                  ))}
-                </div>
-                <p className="text-xs text-surface-500 mt-3">{t('settings.accentApply')}</p>
-              </Card>
-            </>
+            <Card>
+              <h2 className="text-lg font-semibold mb-4">{t('settings.theme')}</h2>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { value: 'dark', icon: Moon, label: t('settings.dark') },
+                  { value: 'light', icon: Sun, label: t('settings.light') },
+                  { value: 'system', icon: Monitor, label: t('settings.system') },
+                ].map(opt => (
+                  <button key={opt.value} onClick={() => { if (opt.value !== 'system') toggleTheme(); }}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors
+                      ${theme === opt.value ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-surface-200 dark:border-surface-700 hover:border-surface-400'}`}>
+                    <opt.icon className="h-6 w-6" />
+                    <span className="text-sm font-medium">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </Card>
           )}
 
-          {/* Language & Currency */}
-          {activeSection === 'language' && (
+          {/* Currency & Date Format */}
+          {activeSection === 'currency' && (
             <>
-              <Card>
-                <h2 className="text-lg font-semibold mb-4">{t('settings.language')}</h2>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                  {LANGUAGES.map(lang => (
-                    <button key={lang.code} onClick={() => handleLanguageChange(lang.code)}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-colors text-center
-                        ${(settings?.language || 'pt-BR') === lang.code
-                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                          : 'border-surface-200 dark:border-surface-700 hover:border-surface-400'}`}>
-                      <span className="text-2xl">{lang.flag}</span>
-                      <span className="text-xs font-medium leading-tight">{lang.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </Card>
-
               <Card>
                 <h2 className="text-lg font-semibold mb-4">{t('settings.defaultCurrency')}</h2>
                 <Select
@@ -243,78 +198,8 @@ export default function SettingsPage() {
           {activeSection === 'ai' && (
             <>
               <Card>
-                <h2 className="text-lg font-semibold mb-1">{t('settings.aiTitle')}</h2>
-                <p className="text-xs text-surface-500 mb-4">{t('settings.aiSubtitle')}</p>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t('settings.apiKey')}</label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <input type={showApiKey ? 'text' : 'password'} value={aiApiKey}
-                          onChange={e => { setAiApiKey(e.target.value); setTestStatus('idle'); }}
-                          placeholder={t('settings.apiKeyPlaceholder')}
-                          className="w-full px-4 py-2 pr-10 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
-                        <button onClick={() => setShowApiKey(!showApiKey)}
-                          className="absolute right-3 top-2.5 text-surface-400 hover:text-surface-600">
-                          {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-xs text-surface-500 mt-1.5 flex items-center gap-1">
-                      <ExternalLink className="h-3 w-3" />
-                      {t('settings.getApiKey')}{' '}
-                      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer"
-                        className="text-primary-500 hover:underline">aistudio.google.com/apikey</a>
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t('settings.model')}</label>
-                    <div className="px-4 py-2.5 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800/50 text-sm text-surface-500 dark:text-surface-400">
-                      {detectedModel
-                        ? <span className="text-surface-700 dark:text-surface-200 font-medium">{detectedModel}</span>
-                        : t('settings.modelAutoDetect')}
-                    </div>
-                    <p className="text-xs text-surface-500 mt-1.5 flex items-center gap-1">
-                      <Info className="h-3 w-3" />
-                      {t('settings.modelTip')}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Button size="sm" onClick={handleTestConnection}
-                      disabled={!aiApiKey || aiApiKey === '••••••••' || testStatus === 'testing'}>
-                      {testStatus === 'testing' ? <><Loader2 className="h-4 w-4 animate-spin" /> {t('settings.testing')}</>
-                        : t('settings.testConnection')}
-                    </Button>
-
-                    {testStatus === 'success' && (
-                      <span className="text-sm text-green-500 flex items-center gap-1">
-                        <CheckCircle className="h-4 w-4" />
-                        {t('settings.connected')}{detectedModel ? ` — ${detectedModel}` : ''}
-                      </span>
-                    )}
-                    {testStatus === 'error' && (
-                      <span className="text-sm text-red-500 flex items-center gap-1"><XCircle className="h-4 w-4" /> {t('settings.connectionFailed')}</span>
-                    )}
-                    {settings?.hasAiApiKey && testStatus === 'idle' && (
-                      <span className="text-sm text-green-500 flex items-center gap-1"><CheckCircle className="h-4 w-4" /> {t('common.configured')}</span>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end pt-2">
-                    <Button onClick={handleSaveAi}>{t('settings.saveAiSettings')}</Button>
-                  </div>
-                </div>
-              </Card>
-
-              <Card>
                 <h2 className="text-lg font-semibold mb-4">{t('settings.aiContext')}</h2>
                 <div className="space-y-3">
-                  <ToggleItem label={t('settings.includeInvestments')}
-                    description={t('settings.investmentsDesc')}
-                    checked={settings?.aiIncludeInvestments ?? true}
-                    onChange={v => updateSettings({ aiIncludeInvestments: v } as any)} />
                   <ToggleItem label={t('settings.includeExpenses')}
                     description={t('settings.expensesDesc')}
                     checked={settings?.aiIncludeExpenses ?? true}
@@ -337,87 +222,6 @@ export default function SettingsPage() {
             </>
           )}
 
-          {/* Open Finance / Pluggy */}
-          {activeSection === 'banking' && (
-            <>
-              <Card>
-                <h2 className="text-lg font-semibold mb-1">{t('settings.openFinanceTitle')}</h2>
-                <p className="text-xs text-surface-500 mb-4">
-                  {t('settings.openFinanceDesc')}
-                </p>
-
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="text-sm font-medium">{t('settings.pluggyStatus')}</span>
-                  {bankingAvailable ? (
-                    <Badge variant="success">{t('settings.pluggyEnabled')}</Badge>
-                  ) : (
-                    <Badge variant="default">{t('settings.pluggyNotConfigured')}</Badge>
-                  )}
-                </div>
-
-                {bankingAvailable ? (
-                  <div className="space-y-3">
-                    <p className="text-sm text-surface-500">
-                      {connections.length > 0
-                        ? t('settings.banksConnected', { count: connections.length })
-                        : t('settings.noBanksConnected')}
-                    </p>
-                    <Button size="sm" onClick={() => navigate('/banking')}>
-                      <Landmark className="h-4 w-4" /> {t('settings.manageConnections')}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-lg bg-surface-50 dark:bg-surface-700/30 text-sm text-surface-600 dark:text-surface-300 space-y-2">
-                    <p className="font-medium">{t('settings.pluggyNotAvailable')}</p>
-                    <p className="text-surface-500">{t('settings.pluggyAskAdmin')}</p>
-                  </div>
-                )}
-              </Card>
-
-              <Card>
-                <h2 className="text-lg font-semibold mb-4">{t('settings.setupGuide')}</h2>
-                <div className="text-sm text-surface-600 dark:text-surface-300 space-y-4">
-                  <div>
-                    <p className="font-medium mb-1">{t('settings.setupStep1Title')}</p>
-                    <p className="text-surface-500">
-                      {t('settings.setupStep1Desc').split('pluggy.ai')[0]}
-                      <a href="https://pluggy.ai" target="_blank" rel="noopener noreferrer"
-                        className="text-primary-500 hover:underline inline-flex items-center gap-1">
-                        pluggy.ai <ExternalLink className="h-3 w-3" />
-                      </a>
-                      {t('settings.setupStep1Desc').split('pluggy.ai')[1] || ''}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium mb-1">{t('settings.setupStep2Title')}</p>
-                    <p className="text-surface-500">
-                      {t('settings.setupStep2Desc')}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium mb-1">{t('settings.setupStep3Title')}</p>
-                    <p className="text-surface-500">
-                      {t('settings.setupStep3Desc')}
-                    </p>
-                    <pre className="mt-2 p-3 rounded-lg bg-surface-100 dark:bg-surface-800 text-xs font-mono overflow-x-auto">
-{`PLUGGY_CLIENT_ID=your_client_id_here
-PLUGGY_CLIENT_SECRET=your_client_secret_here`}
-                    </pre>
-                  </div>
-                  <div>
-                    <p className="font-medium mb-1">{t('settings.setupStep4Title')}</p>
-                    <p className="text-surface-500">
-                      {t('settings.setupStep4Desc')}
-                    </p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs">
-                    {t('settings.pluggyNote')}
-                  </div>
-                </div>
-              </Card>
-            </>
-          )}
-
           {/* Notifications */}
           {activeSection === 'notifications' && (
             <Card>
@@ -435,6 +239,9 @@ PLUGGY_CLIENT_SECRET=your_client_secret_here`}
               </div>
             </Card>
           )}
+
+          {/* Declarations */}
+          {activeSection === 'declarations' && <DeclarationList />}
 
           {/* Data & Privacy */}
           {activeSection === 'data' && (
@@ -498,6 +305,328 @@ PLUGGY_CLIENT_SECRET=your_client_secret_here`}
     </div>
   );
 }
+
+// ============================================================
+// Financial Profile Section — Editable onboarding data
+// ============================================================
+
+function FinancialProfileSection() {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const { profile, isLoading, isSaving, fetchProfile, updateProfile } = useOnboardingStore();
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!loaded) {
+      fetchProfile().then(() => setLoaded(true));
+    }
+  }, [loaded, fetchProfile]);
+
+  async function save(data: Partial<FinancialProfile>) {
+    try {
+      await updateProfile(data);
+      toast(t('settings.fpSaved'));
+    } catch {
+      toast(t('settings.fpSaveFailed'));
+    }
+  }
+
+  function toggleArray(field: 'preferredPaymentMethods' | 'expectedFixedExpenses' | 'dependentTypes', value: string) {
+    if (!profile) return;
+    const arr = profile[field] as string[];
+    const updated = arr.includes(value) ? arr.filter(x => x !== value) : [...arr, value];
+    save({ [field]: updated });
+  }
+
+  const GOALS = [
+    { value: 'SAVE_MORE', label: t('onboarding.goals.saveMore') },
+    { value: 'PAY_OFF_DEBT', label: t('onboarding.goals.payOffDebt') },
+    { value: 'CONTROL_SPENDING', label: t('onboarding.goals.controlSpending') },
+    { value: 'INVEST_MORE', label: t('onboarding.goals.investMore') },
+    { value: 'BUILD_EMERGENCY_FUND', label: t('onboarding.goals.emergencyFund') },
+  ];
+
+  const INCOME_TYPES = [
+    { value: 'CLT', label: t('onboarding.income.clt') },
+    { value: 'SELF_EMPLOYED', label: t('onboarding.income.selfEmployed') },
+    { value: 'FREELANCER', label: t('onboarding.income.freelancer') },
+    { value: 'BUSINESS_OWNER', label: t('onboarding.income.businessOwner') },
+    { value: 'RETIREMENT', label: t('onboarding.income.retirement') },
+    { value: 'OTHER_INCOME', label: t('onboarding.income.other') },
+  ];
+
+  const INCOME_RANGES = [
+    { value: 'UP_TO_2K', label: t('onboarding.incomeRange.upTo2k') },
+    { value: 'FROM_2K_TO_5K', label: t('onboarding.incomeRange.from2kTo5k') },
+    { value: 'FROM_5K_TO_10K', label: t('onboarding.incomeRange.from5kTo10k') },
+    { value: 'FROM_10K_TO_20K', label: t('onboarding.incomeRange.from10kTo20k') },
+    { value: 'ABOVE_20K', label: t('onboarding.incomeRange.above20k') },
+  ];
+
+  const HOUSING_TYPES = [
+    { value: 'OWN_PAID', label: t('onboarding.housing.ownPaid') },
+    { value: 'OWN_MORTGAGE', label: t('onboarding.housing.ownMortgage') },
+    { value: 'RENT', label: t('onboarding.housing.rent') },
+    { value: 'FAMILY', label: t('onboarding.housing.family') },
+  ];
+
+  const PAYMENT_METHODS = [
+    { value: 'PIX', label: 'PIX' },
+    { value: 'CREDIT', label: t('onboarding.payment.credit') },
+    { value: 'DEBIT', label: t('onboarding.payment.debit') },
+    { value: 'CASH', label: t('onboarding.payment.cash') },
+    { value: 'BOLETO', label: t('onboarding.payment.boleto') },
+  ];
+
+  const FIXED_EXPENSES = [
+    { value: 'rent_mortgage', label: t('onboarding.fixedExpenses.rentMortgage') },
+    { value: 'condo', label: t('onboarding.fixedExpenses.condo') },
+    { value: 'electricity', label: t('onboarding.fixedExpenses.electricity') },
+    { value: 'water', label: t('onboarding.fixedExpenses.water') },
+    { value: 'internet', label: t('onboarding.fixedExpenses.internet') },
+    { value: 'cellphone', label: t('onboarding.fixedExpenses.cellphone') },
+    { value: 'health_insurance', label: t('onboarding.fixedExpenses.healthInsurance') },
+    { value: 'insurance', label: t('onboarding.fixedExpenses.insurance') },
+    { value: 'gym', label: t('onboarding.fixedExpenses.gym') },
+    { value: 'streaming', label: t('onboarding.fixedExpenses.streaming') },
+    { value: 'education', label: t('onboarding.fixedExpenses.education') },
+    { value: 'alimony', label: t('onboarding.fixedExpenses.alimony') },
+  ];
+
+  const DEPENDENT_TYPES = [
+    { value: 'children', label: t('onboarding.dependents.children') },
+    { value: 'spouse', label: t('onboarding.dependents.spouse') },
+    { value: 'parents', label: t('onboarding.dependents.parents') },
+    { value: 'other', label: t('onboarding.dependents.other') },
+  ];
+
+  if (isLoading || !loaded) {
+    return (
+      <Card>
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-primary-500" />
+        </div>
+      </Card>
+    );
+  }
+
+  const chipClass = (active: boolean) =>
+    `py-1.5 px-3 rounded-full text-sm border transition-all cursor-pointer ${
+      active
+        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-medium'
+        : 'border-surface-200 dark:border-surface-600 text-surface-600 dark:text-surface-400 hover:border-surface-300 dark:hover:border-surface-500'
+    }`;
+
+  const cardSelectClass = (active: boolean) =>
+    `flex items-center gap-2 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+      active
+        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 ring-1 ring-primary-500'
+        : 'border-surface-200 dark:border-surface-600 hover:border-surface-300 dark:hover:border-surface-500'
+    }`;
+
+  return (
+    <>
+      {/* Goal */}
+      <Card>
+        <h2 className="text-lg font-semibold mb-1">{t('settings.fpGoalTitle')}</h2>
+        <p className="text-xs text-surface-500 mb-4">{t('settings.fpGoalDesc')}</p>
+        <div className="grid grid-cols-1 gap-2">
+          {GOALS.map(g => (
+            <button key={g.value} onClick={() => save({ primaryGoal: g.value })}
+              className={cardSelectClass(profile?.primaryGoal === g.value)}>
+              <span className="text-sm font-medium text-surface-900 dark:text-white">{g.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-5">
+          <h3 className="text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('settings.fpControlScore')}</h3>
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-surface-400">{t('onboarding.welcome.controlLow')}</span>
+            <input type="range" min={1} max={5} value={profile?.financialControlScore ?? 3}
+              onChange={e => save({ financialControlScore: Number(e.target.value) })}
+              className="flex-1 accent-primary-500" />
+            <span className="text-xs text-surface-400">{t('onboarding.welcome.controlHigh')}</span>
+          </div>
+          <p className="text-center text-sm font-medium text-primary-500 mt-1">{profile?.financialControlScore ?? 3}/5</p>
+        </div>
+      </Card>
+
+      {/* Income */}
+      <Card>
+        <h2 className="text-lg font-semibold mb-1">{t('settings.fpIncomeTitle')}</h2>
+        <p className="text-xs text-surface-500 mb-4">{t('settings.fpIncomeDesc')}</p>
+
+        <h3 className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2">{t('onboarding.incomeWork.typeQuestion')}</h3>
+        <div className="grid grid-cols-2 gap-2 mb-5">
+          {INCOME_TYPES.map(it => (
+            <button key={it.value} onClick={() => save({ incomeType: it.value })}
+              className={cardSelectClass(profile?.incomeType === it.value)}>
+              <span className="text-sm font-medium text-surface-900 dark:text-white">{it.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {(profile?.incomeType === 'CLT' || profile?.incomeType === 'RETIREMENT') && (
+          <div className="mb-5">
+            <h3 className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2">{t('onboarding.incomeWork.incomeDay')}</h3>
+            <div className="flex flex-wrap gap-1.5">
+              {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                <button key={day} onClick={() => save({ expectedIncomeDay: profile?.expectedIncomeDay === day ? null : day })}
+                  className={`w-9 h-9 rounded-lg text-xs font-medium border transition-all ${
+                    profile?.expectedIncomeDay === day
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600'
+                      : 'border-surface-200 dark:border-surface-600 text-surface-600 dark:text-surface-400 hover:border-surface-300'
+                  }`}>
+                  {day}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <h3 className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2">{t('onboarding.incomeWork.rangeQuestion')}</h3>
+        <div className="space-y-1.5 mb-5">
+          {INCOME_RANGES.map(r => (
+            <button key={r.value} onClick={() => save({ incomeRange: r.value })}
+              className={`w-full py-2 px-4 rounded-lg text-sm font-medium border text-left transition-all ${
+                profile?.incomeRange === r.value
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600'
+                  : 'border-surface-200 dark:border-surface-600 text-surface-600 dark:text-surface-400 hover:border-surface-300'
+              }`}>
+              {r.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between p-3 rounded-lg border border-surface-200 dark:border-surface-600">
+          <span className="text-sm text-surface-700 dark:text-surface-300">{t('onboarding.incomeWork.variableIncome')}</span>
+          <button onClick={() => save({ incomeIsVariable: !profile?.incomeIsVariable })}
+            className={`relative w-12 h-6 rounded-full transition-colors ${profile?.incomeIsVariable ? 'bg-primary-600' : 'bg-surface-300 dark:bg-surface-600'}`}>
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${profile?.incomeIsVariable ? 'translate-x-6' : 'translate-x-0.5'}`} />
+          </button>
+        </div>
+      </Card>
+
+      {/* Banking Profile */}
+      <Card>
+        <h2 className="text-lg font-semibold mb-1">{t('settings.fpBankingTitle')}</h2>
+        <p className="text-xs text-surface-500 mb-4">{t('settings.fpBankingDesc')}</p>
+
+        <div className="grid grid-cols-2 gap-6 mb-5">
+          <div>
+            <h3 className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2">{t('onboarding.financial.bankAccounts')}</h3>
+            <div className="flex gap-2">
+              {[{ v: 1, l: '1' }, { v: 2, l: '2' }, { v: 3, l: '3+' }].map(opt => (
+                <button key={opt.v} onClick={() => save({ bankAccountCount: opt.v })}
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium border transition-all ${
+                    profile?.bankAccountCount === opt.v
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600'
+                      : 'border-surface-200 dark:border-surface-600 text-surface-600 dark:text-surface-400'
+                  }`}>
+                  {opt.l}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2">{t('onboarding.financial.creditCards')}</h3>
+            <div className="flex gap-2">
+              {[{ v: 0, l: '0' }, { v: 1, l: '1' }, { v: 2, l: '2+' }].map(opt => (
+                <button key={opt.v} onClick={() => save({ creditCardCount: opt.v })}
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium border transition-all ${
+                    profile?.creditCardCount === opt.v
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600'
+                      : 'border-surface-200 dark:border-surface-600 text-surface-600 dark:text-surface-400'
+                  }`}>
+                  {opt.l}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <h3 className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2">{t('onboarding.financial.paymentMethods')}</h3>
+        <div className="flex flex-wrap gap-2">
+          {PAYMENT_METHODS.map(m => (
+            <button key={m.value}
+              onClick={() => toggleArray('preferredPaymentMethods', m.value)}
+              className={chipClass(profile?.preferredPaymentMethods?.includes(m.value) ?? false)}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* Housing & Fixed Expenses */}
+      <Card>
+        <h2 className="text-lg font-semibold mb-1">{t('onboarding.housingExpenses.title')}</h2>
+        <p className="text-xs text-surface-500 mb-4">{t('settings.fpHousingDesc')}</p>
+
+        <h3 className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2">{t('onboarding.housingExpenses.housingQuestion')}</h3>
+        <div className="grid grid-cols-2 gap-2 mb-5">
+          {HOUSING_TYPES.map(ht => (
+            <button key={ht.value} onClick={() => save({ housingType: ht.value })}
+              className={cardSelectClass(profile?.housingType === ht.value)}>
+              <span className="text-sm font-medium text-surface-900 dark:text-white">{ht.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <h3 className="text-xs font-semibold text-surface-500 uppercase tracking-wide mb-2">{t('onboarding.housingExpenses.fixedExpensesQuestion')}</h3>
+        <p className="text-xs text-surface-400 mb-3">{t('settings.fpFixedExpensesHint')}</p>
+        <div className="flex flex-wrap gap-2 mb-5">
+          {FIXED_EXPENSES.map(fe => (
+            <button key={fe.value}
+              onClick={() => toggleArray('expectedFixedExpenses', fe.value)}
+              className={chipClass(profile?.expectedFixedExpenses?.includes(fe.value) ?? false)}>
+              {fe.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between p-3 rounded-lg border border-surface-200 dark:border-surface-600 mb-3">
+          <span className="text-sm text-surface-700 dark:text-surface-300">{t('onboarding.housingExpenses.hasDependents')}</span>
+          <button onClick={() => {
+            const next = !profile?.hasDependents;
+            save({ hasDependents: next, ...(!next ? { dependentTypes: [] } : {}) });
+          }}
+            className={`relative w-12 h-6 rounded-full transition-colors ${profile?.hasDependents ? 'bg-primary-600' : 'bg-surface-300 dark:bg-surface-600'}`}>
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${profile?.hasDependents ? 'translate-x-6' : 'translate-x-0.5'}`} />
+          </button>
+        </div>
+
+        {profile?.hasDependents && (
+          <div className="flex flex-wrap gap-2">
+            {DEPENDENT_TYPES.map(dt => (
+              <button key={dt.value}
+                onClick={() => toggleArray('dependentTypes', dt.value)}
+                className={chipClass(profile?.dependentTypes?.includes(dt.value) ?? false)}>
+                {dt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Info box */}
+      <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-300">
+        <p className="font-semibold mb-1">{t('settings.fpInfoTitle')}</p>
+        <p className="text-xs leading-relaxed">{t('settings.fpInfoDesc')}</p>
+      </div>
+
+      {isSaving && (
+        <div className="flex items-center gap-2 text-xs text-surface-400">
+          <Loader2 className="h-3 w-3 animate-spin" /> {t('common.loading')}
+        </div>
+      )}
+    </>
+  );
+}
+
+// ============================================================
+// Shared Components
+// ============================================================
 
 function ToggleItem({ label, description, checked, onChange }: {
   label: string; description?: string; checked: boolean; onChange: (v: boolean) => void;

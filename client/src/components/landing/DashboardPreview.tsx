@@ -1,4 +1,4 @@
-import { Wallet, TrendingDown, DollarSign, PiggyBank } from 'lucide-react';
+import { Wallet, TrendingDown, DollarSign } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ScrollReveal from './ScrollReveal';
 
@@ -52,14 +52,13 @@ export default function DashboardPreview() {
                 </div>
 
                 {/* Stat cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
                   <PreviewStatCard icon={<Wallet className="h-4 w-4" />} label={t('landing.preview.income')} value={t('landing.preview.incomeValue')} iconColor="text-green-400" bgColor="bg-green-500/10" />
                   <PreviewStatCard icon={<TrendingDown className="h-4 w-4" />} label={t('landing.preview.expenses')} value={t('landing.preview.expensesValue')} iconColor="text-red-400" bgColor="bg-red-500/10" />
                   <PreviewStatCard icon={<DollarSign className="h-4 w-4" />} label={t('landing.preview.balance')} value={t('landing.preview.balanceValue')} iconColor="text-primary-400" bgColor="bg-primary-500/10" />
-                  <PreviewStatCard icon={<PiggyBank className="h-4 w-4" />} label={t('landing.preview.invested')} value={t('landing.preview.investedValue')} iconColor="text-accent-400" bgColor="bg-accent-500/10" />
                 </div>
 
-                <div className="grid sm:grid-cols-3 gap-6">
+                <div className="grid sm:grid-cols-2 gap-6">
                   {/* Pie chart mock */}
                   <div className="bg-surface-900/50 rounded-xl p-5">
                     <div className="text-xs text-surface-400 mb-4 font-medium">{t('landing.preview.expensesByCategory')}</div>
@@ -103,26 +102,6 @@ export default function DashboardPreview() {
                       ))}
                     </div>
                   </div>
-
-                  {/* Investments card */}
-                  <div className="bg-surface-900/50 rounded-xl p-5">
-                    <div className="text-xs text-surface-400 mb-4 font-medium">{t('landing.preview.investments')}</div>
-                    <div className="space-y-3">
-                      <div>
-                        <div className="text-xs text-surface-500">{t('landing.preview.totalInvested')}</div>
-                        <div className="text-lg font-bold text-white">{t('landing.preview.investedValue')}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-surface-500">{t('landing.preview.totalYield')}</div>
-                        <div className="text-lg font-bold text-green-400">{t('landing.preview.yieldValue')}</div>
-                      </div>
-                      <div className="pt-2 space-y-2">
-                        <InvestmentRow label={t('landing.preview.treasurySelic')} value={t('landing.preview.treasuryValue')} yield="+5.2%" />
-                        <InvestmentRow label={t('landing.preview.cdb')} value={t('landing.preview.cdbValue')} yield="+4.8%" />
-                        <InvestmentRow label={t('landing.preview.lci')} value={t('landing.preview.lciValue')} yield="+3.9%" />
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -159,14 +138,3 @@ function LegendItem({ color, label, value }: { color: string; label: string; val
   );
 }
 
-function InvestmentRow({ label, value, yield: yieldVal }: { label: string; value: string; yield: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <div className="text-xs text-surface-300">{label}</div>
-        <div className="text-xs text-surface-500">{value}</div>
-      </div>
-      <span className="text-xs font-medium text-green-400">{yieldVal}</span>
-    </div>
-  );
-}

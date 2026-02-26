@@ -1,6 +1,4 @@
 import { prisma } from '../config/prisma.js';
-import { getCurrentRates } from './bcb.service.js';
-import { calculateCurrentValue } from './yieldCalculator.service.js';
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -16,7 +14,7 @@ export async function buildSystemPrompt(userId: string): Promise<string> {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   // Fetch all user data
-  const [incomes, fixedExpenses, variableExpenses, investments, rates, bankAccounts, bankTransactions] = await Promise.all([
+  const [incomes, fixedExpenses, variableExpenses, stdAccounts, recentTransactions] = await Promise.all([
     prisma.income.findMany({ where: { userId } }),
     prisma.expense.findMany({
       where: { userId, type: 'FIXED' },
@@ -26,23 +24,18 @@ export async function buildSystemPrompt(userId: string): Promise<string> {
       where: { userId, type: 'VARIABLE', date: { gte: monthStart, lte: monthEnd } },
       include: { category: true },
     }),
-    prisma.investment.findMany({
-      where: { userId, status: 'ACTIVE' },
-      include: { investmentType: true },
+    prisma.stdAccount.findMany({
+      where: { userId, isActive: true },
     }),
-    getCurrentRates(),
-    prisma.bankAccount.findMany({
-      where: { bankConnection: { userId, status: 'ACTIVE' } },
-      include: { bankConnection: { select: { connectorName: true } } },
-    }),
-    prisma.bankTransaction.findMany({
+    prisma.stdTransaction.findMany({
       where: {
-        bankAccount: { bankConnection: { userId, status: 'ACTIVE' } },
+        userId,
         date: { gte: thirtyDaysAgo },
+        isInternalTransfer: false,
       },
       orderBy: { date: 'desc' },
       take: 20,
-      include: { bankAccount: { select: { name: true } } },
+      include: { stdAccount: { select: { accountLabel: true } } },
     }),
   ]);
 
@@ -55,22 +48,6 @@ export async function buildSystemPrompt(userId: string): Promise<string> {
   const balance = totalIncome - totalFixed - totalVar;
   const commitRate = totalIncome > 0 ? (((totalFixed + totalVar) / totalIncome) * 100).toFixed(1) : '0';
 
-  const totalInvested = investments.reduce((s, i) => s + i.amountInvested, 0);
-
-  // Calculate current investment values
-  const investmentLines = await Promise.all(
-    investments.map(async (inv) => {
-      const currentValue = await calculateCurrentValue(
-        inv.amountInvested,
-        inv.applicationDate,
-        inv.yieldType,
-        inv.yieldRate,
-      );
-      const valueStr = currentValue ? ` -> Current: ${formatCurrency(currentValue)}` : '';
-      return `- ${inv.name}: ${formatCurrency(inv.amountInvested)} (${inv.investmentType.name}, ${inv.yieldDescription})${valueStr}`;
-    }),
-  );
-
   // Identify trends in fixed expenses with variable values
   const variableFixed = fixedExpenses.filter((e) => e.history.length > 0);
   const increasing = variableFixed.filter((e) => {
@@ -81,29 +58,21 @@ export async function buildSystemPrompt(userId: string): Promise<string> {
 
   const overLimit = fixedExpenses.filter((e) => e.goal && e.amount > e.goal.limit);
 
-  // Economic rates context
-  const rateLines = Object.entries(rates)
-    .map(([name, data]) => {
-      if (name === 'DOLAR') return `- Dólar (PTAX): R$ ${data.value.toFixed(2)} (${data.date})`;
-      return `- ${name}: ${data.value}% (${data.date})`;
-    })
-    .join('\n');
-
   // Bank accounts context
   let bankSection = '';
-  if (bankAccounts.length > 0) {
-    const bankLines = bankAccounts.map(
-      (a) => `- ${a.bankConnection.connectorName} / ${a.name} (${a.type}): ${formatCurrency(a.balance)}`
+  if (stdAccounts.length > 0) {
+    const bankLines = stdAccounts.map(
+      (a) => `- ${a.bankName} / ${a.accountLabel} (${a.sourceType}): ${formatCurrency(a.currentBalance)}`
     ).join('\n');
-    const totalBankBalance = bankAccounts.reduce((s, a) => s + a.balance, 0);
+    const totalBankBalance = stdAccounts.reduce((s, a) => s + a.currentBalance, 0);
     bankSection = `\n### Bank Accounts (Open Finance):\n${bankLines}\n- Total bank balance: ${formatCurrency(totalBankBalance)}`;
   }
 
-  // Bank transactions context
+  // Recent transactions context
   let txSection = '';
-  if (bankTransactions.length > 0) {
-    const txLines = bankTransactions.map(
-      (tx) => `- ${new Date(tx.date).toLocaleDateString('pt-BR')} | ${tx.description}: ${tx.type === 'CREDIT' ? '+' : '-'}${formatCurrency(Math.abs(tx.amount))} (${tx.bankAccount.name})`
+  if (recentTransactions.length > 0) {
+    const txLines = recentTransactions.map(
+      (tx) => `- ${new Date(tx.date).toLocaleDateString('pt-BR')} | ${tx.descriptionClean}: ${tx.direction === 'CREDIT' ? '+' : '-'}${formatCurrency(tx.absoluteAmount)} (${tx.stdAccount.accountLabel})`
     ).join('\n');
     txSection = `\n### Recent Bank Transactions (last 30 days):\n${txLines}`;
   }
@@ -148,13 +117,6 @@ ${variableExpenses.map((e) => `- ${e.description}: ${formatCurrency(e.amount)} [
 - Variable expenses: ${formatCurrency(totalVar)}
 - Available balance: ${formatCurrency(balance)}
 - Commitment rate: ${commitRate}%
-
-### Investments:
-${investmentLines.join('\n') || 'None'}
-- Total invested: ${formatCurrency(totalInvested)}
-
-### Current Economic Rates:
-${rateLines || 'Not available'}
 ${bankSection}${txSection}
 
 ### Trends:

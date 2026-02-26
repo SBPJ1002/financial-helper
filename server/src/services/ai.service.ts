@@ -1,5 +1,3 @@
-import { prisma } from '../config/prisma.js';
-import { decrypt } from '../utils/encryption.js';
 import { ApiError } from '../utils/apiError.js';
 
 interface ChatMessage {
@@ -247,37 +245,14 @@ function createAdapter(apiKey: string, model: string): AIAdapter {
   return new GoogleAdapter(apiKey, model || 'auto');
 }
 
-export async function getAdapterForUser(userId: string): Promise<AIAdapter> {
-  const settings = await prisma.userSettings.findUnique({ where: { userId } });
-
-  if (settings?.aiApiKey) {
-    try {
-      const decryptedKey = decrypt(settings.aiApiKey);
-      return createAdapter(decryptedKey, settings.aiModel);
-    } catch {
-      throw ApiError.badRequest('Failed to decrypt AI API key. Please reconfigure in Settings.');
-    }
+export async function getAdapterForUser(_userId: string): Promise<AIAdapter> {
+  const apiKey = process.env.DEFAULT_AI_API_KEY || process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) {
+    throw ApiError.badRequest('AI not configured. Contact the administrator.');
   }
 
-  // Fallback to server env vars
-  const envKey = process.env.DEFAULT_AI_API_KEY || process.env.GOOGLE_AI_API_KEY;
-  if (!envKey) {
-    throw ApiError.badRequest('AI not configured. Please set your API key in Settings.');
-  }
-
-  const envModel = process.env.DEFAULT_AI_MODEL || 'auto';
-
-  return createAdapter(envKey, envModel);
-}
-
-export async function testProviderConnection(
-  provider: string,
-  apiKey: string,
-  model: string,
-): Promise<{ success: boolean; model?: string }> {
-  const adapter = new GoogleAdapter(apiKey, 'auto');
-  const success = await adapter.testConnection();
-  return { success, model: adapter.detectedModel || undefined };
+  const model = process.env.DEFAULT_AI_MODEL || 'auto';
+  return createAdapter(apiKey, model);
 }
 
 export { type AIAdapter, type ChatMessage as AIChatMessage };

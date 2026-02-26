@@ -43,49 +43,10 @@ interface Expense {
   goal: { id: string; limit: number } | null;
 }
 
-interface Asset {
-  id: string;
-  ticker: string;
-  name: string;
-  type: string;
-  sector: string | null;
-  currency: string;
-}
-
-interface Investment {
-  id: string;
-  name: string;
-  investmentTypeId: string;
-  investmentType: { id: string; name: string; category: string };
-  amountInvested: number;
-  currentValue: number | null;
-  applicationDate: string;
-  maturityDate: string | null;
-  yieldDescription: string;
-  yieldType: string;
-  institution: string;
-  status: string;
-  // Variable income fields
-  assetId: string | null;
-  asset: Asset | null;
-  quantity: number | null;
-  averagePrice: number | null;
-  purchaseDate: string | null;
-  // Treasury fields
-  treasuryTitle: string | null;
-  treasuryRate: number | null;
-  treasuryIndex: string | null;
-  // Pluggy fields
-  pluggyInvestmentId: string | null;
-  amountProfit: number | null;
-  lastMonthRate: number | null;
-  annualRate: number | null;
-}
-
-interface InvestmentType {
-  id: string;
-  name: string;
-  category: string;
+interface SourceBreakdown {
+  bank: number;
+  creditCard: number;
+  manual: number;
 }
 
 interface DashboardSummary {
@@ -98,26 +59,26 @@ interface DashboardSummary {
   savingsRate: number;
   categoryBreakdown: Array<{ name: string; emoji: string; total: number }>;
   topExpenses: Array<{ description: string; amount: number; category: string; emoji: string }>;
+  fixedBySource?: SourceBreakdown;
+  variableBySource?: SourceBreakdown;
+  invoiceTotal?: number;
+  declarationMatchRate?: number;
 }
 
 interface FinanceState {
   // Data
   incomes: Income[];
   expenses: Expense[];
-  investments: Investment[];
   categories: Category[];
   incomeCategories: Category[];
-  investmentTypes: InvestmentType[];
   dashboard: DashboardSummary | null;
   isLoading: boolean;
 
   // Fetch
   fetchIncomes: (month?: string) => Promise<void>;
   fetchExpenses: (type?: 'FIXED' | 'VARIABLE') => Promise<void>;
-  fetchInvestments: () => Promise<void>;
   fetchCategories: () => Promise<void>;
   fetchIncomeCategories: () => Promise<void>;
-  fetchInvestmentTypes: () => Promise<void>;
   fetchDashboard: (month?: string) => Promise<void>;
   fetchAll: () => Promise<void>;
 
@@ -143,17 +104,6 @@ interface FinanceState {
   setExpenseGoal: (expenseId: string, limit: number) => Promise<void>;
   removeExpenseGoal: (expenseId: string) => Promise<void>;
 
-  // Investment CRUD
-  addInvestment: (data: {
-    name: string; investmentTypeId: string; amountInvested: number;
-    applicationDate: string; maturityDate?: string; yieldDescription: string;
-    institution: string; status?: string;
-    assetId?: string; quantity?: number; averagePrice?: number; purchaseDate?: string;
-    treasuryTitle?: string; treasuryRate?: number; treasuryIndex?: string;
-  }) => Promise<void>;
-  updateInvestment: (id: string, data: Record<string, unknown>) => Promise<void>;
-  deleteInvestment: (id: string) => Promise<void>;
-
   // Category CRUD
   addCategory: (data: { name: string; emoji?: string; type?: string }) => Promise<Category>;
   updateCategory: (id: string, data: { name?: string; emoji?: string; type?: string }) => Promise<void>;
@@ -167,10 +117,8 @@ interface FinanceState {
 export const useFinanceStore = create<FinanceState>()((set, get) => ({
   incomes: [],
   expenses: [],
-  investments: [],
   categories: [],
   incomeCategories: [],
-  investmentTypes: [],
   dashboard: null,
   isLoading: false,
 
@@ -185,10 +133,6 @@ export const useFinanceStore = create<FinanceState>()((set, get) => ({
     const { data } = await api.get('/expenses', { params });
     set({ expenses: data });
   },
-  fetchInvestments: async () => {
-    const { data } = await api.get('/investments');
-    set({ investments: data });
-  },
   fetchCategories: async () => {
     const { data } = await api.get('/categories', { params: { type: 'EXPENSE' } });
     set({ categories: data });
@@ -196,10 +140,6 @@ export const useFinanceStore = create<FinanceState>()((set, get) => ({
   fetchIncomeCategories: async () => {
     const { data } = await api.get('/categories', { params: { type: 'INCOME' } });
     set({ incomeCategories: data });
-  },
-  fetchInvestmentTypes: async () => {
-    const { data } = await api.get('/investments/types');
-    set({ investmentTypes: data });
   },
   fetchDashboard: async (month) => {
     const params = month ? { month } : {};
@@ -212,10 +152,8 @@ export const useFinanceStore = create<FinanceState>()((set, get) => ({
       await Promise.all([
         get().fetchIncomes(),
         get().fetchExpenses(),
-        get().fetchInvestments(),
         get().fetchCategories(),
         get().fetchIncomeCategories(),
-        get().fetchInvestmentTypes(),
         get().fetchDashboard(),
       ]);
     } finally {
@@ -283,20 +221,6 @@ export const useFinanceStore = create<FinanceState>()((set, get) => ({
   removeExpenseGoal: async (expenseId) => {
     await api.delete(`/expenses/${expenseId}/goal`);
     await get().fetchExpenses();
-  },
-
-  // --- Investment ---
-  addInvestment: async (data) => {
-    await api.post('/investments', data);
-    await get().fetchInvestments();
-  },
-  updateInvestment: async (id, data) => {
-    await api.put(`/investments/${id}`, data);
-    await get().fetchInvestments();
-  },
-  deleteInvestment: async (id) => {
-    await api.delete(`/investments/${id}`);
-    await get().fetchInvestments();
   },
 
   // --- Category ---

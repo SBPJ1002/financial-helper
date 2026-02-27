@@ -11,5 +11,6 @@ router.post('/register', registerLimiter, validate(registerSchema), authControll
 router.post('/login', authLimiter, validate(loginSchema), authController.login);
 router.post('/logout', requireAuth, authController.logout);
 router.get('/me', requireAuth, authController.getMe);
+router.patch('/plan', requireAuth, authController.updatePlan);
 
 export default router;

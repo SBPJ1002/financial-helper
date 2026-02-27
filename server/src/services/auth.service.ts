@@ -148,6 +148,16 @@ export async function logout(token: string) {
   await prisma.session.deleteMany({ where: { token } });
 }
 
+export async function updatePlan(userId: string, plan: 'FREE' | 'AI_AGENT') {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { plan },
+    select: { id: true, fullName: true, email: true, role: true, plan: true, createdAt: true },
+  });
+
+  return user;
+}
+
 export async function getMe(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },

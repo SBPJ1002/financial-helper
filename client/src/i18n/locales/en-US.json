@@ -385,6 +385,8 @@
     "planInvestments": "Investments",
     "planInvestmentsDesc": "Everything in AI Agent + investment tracking, simulator, and economic rates.",
     "planComingSoon": "Coming soon",
+    "planUpdated": "Plan updated successfully!",
+    "planUpdateFailed": "Failed to update plan.",
     "memberSince": "Member since",
     "theme": "Theme",
     "dark": "Dark",

@@ -30,6 +30,20 @@ export async function logout(req: AuthRequest, res: Response, next: NextFunction
   }
 }
 
+export async function updatePlan(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { plan } = req.body;
+    if (plan !== 'FREE' && plan !== 'AI_AGENT') {
+      res.status(400).json({ message: 'Invalid plan' });
+      return;
+    }
+    const user = await authService.updatePlan(req.userId!, plan);
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getMe(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const user = await authService.getMe(req.userId!);

@@ -385,6 +385,8 @@
     "planInvestments": "Investimentos",
     "planInvestmentsDesc": "Tudo do Agente IA + controle de investimentos, simulador e taxas econômicas.",
     "planComingSoon": "Em breve",
+    "planUpdated": "Plano atualizado com sucesso!",
+    "planUpdateFailed": "Erro ao atualizar o plano.",
     "memberSince": "Membro desde",
     "theme": "Tema",
     "dark": "Escuro",

@@ -37,6 +37,7 @@ interface AuthState {
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   initialize: () => Promise<void>;
+  updatePlan: (plan: 'FREE' | 'AI_AGENT') => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()((set) => ({
@@ -75,6 +76,13 @@ export const useAuthStore = create<AuthState>()((set) => ({
     }
     localStorage.removeItem('auth-token');
     set({ user: null, token: null });
+  },
+
+  updatePlan: async (plan) => {
+    const { data } = await api.patch('/auth/plan', { plan });
+    set((state) => ({
+      user: state.user ? { ...state.user, plan: data.plan } : null,
+    }));
   },
 
   initialize: async () => {

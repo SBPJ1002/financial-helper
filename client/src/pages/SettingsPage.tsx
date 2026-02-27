@@ -25,7 +25,7 @@ export default function SettingsPage() {
   const { theme, toggleTheme } = useSettingsStore();
   const { settings, fetchSettings, updateSettings } = useUserSettingsStore();
   const { clearHistory } = useChatStore();
-  const { user } = useAuthStore();
+  const { user, updatePlan } = useAuthStore();
 
   const [clearChatConfirm, setClearChatConfirm] = useState(false);
   const [activeSection, setActiveSection] = useState('profile');
@@ -109,24 +109,32 @@ export default function SettingsPage() {
                 <p className="text-xs text-surface-500 mb-4">{t('settings.planDesc')}</p>
                 <div className="space-y-3">
                   {/* Free tier */}
-                  <div className={`p-4 rounded-xl ${user?.plan === 'FREE' || !user?.plan ? 'border-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border border-surface-200 dark:border-surface-600'}`}>
+                  <button onClick={async () => {
+                    if (user?.plan !== 'FREE') {
+                      try { await updatePlan('FREE'); toast(t('settings.planUpdated')); } catch { toast(t('settings.planUpdateFailed')); }
+                    }
+                  }} className={`w-full text-left p-4 rounded-xl transition-colors ${user?.plan === 'FREE' || !user?.plan ? 'border-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border border-surface-200 dark:border-surface-600 hover:border-surface-300 dark:hover:border-surface-500'}`}>
                     <div className="flex items-center gap-2 mb-1">
                       <Crown className="h-4 w-4 text-primary-500" />
                       <span className={`text-sm font-semibold ${user?.plan === 'FREE' || !user?.plan ? 'text-primary-600 dark:text-primary-400' : 'text-surface-900 dark:text-white'}`}>{t('settings.planFree')}</span>
                       {(user?.plan === 'FREE' || !user?.plan) && <Badge variant="success" className="ml-auto">{t('settings.planCurrent')}</Badge>}
                     </div>
                     <p className="text-xs text-surface-500">{t('settings.planFreeDesc')}</p>
-                  </div>
+                  </button>
 
                   {/* AI Agent tier */}
-                  <div className={`p-4 rounded-xl ${user?.plan === 'AI_AGENT' ? 'border-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border border-surface-200 dark:border-surface-600 hover:border-surface-300 dark:hover:border-surface-500 transition-colors'}`}>
+                  <button onClick={async () => {
+                    if (user?.plan !== 'AI_AGENT') {
+                      try { await updatePlan('AI_AGENT'); toast(t('settings.planUpdated')); } catch { toast(t('settings.planUpdateFailed')); }
+                    }
+                  }} className={`w-full text-left p-4 rounded-xl transition-colors ${user?.plan === 'AI_AGENT' ? 'border-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border border-surface-200 dark:border-surface-600 hover:border-surface-300 dark:hover:border-surface-500'}`}>
                     <div className="flex items-center gap-2 mb-1">
                       <Sparkles className="h-4 w-4 text-amber-500" />
                       <span className={`text-sm font-semibold ${user?.plan === 'AI_AGENT' ? 'text-primary-600 dark:text-primary-400' : 'text-surface-900 dark:text-white'}`}>{t('settings.planAiAgent')}</span>
                       {user?.plan === 'AI_AGENT' && <Badge variant="success" className="ml-auto">{t('settings.planCurrent')}</Badge>}
                     </div>
                     <p className="text-xs text-surface-500">{t('settings.planAiAgentDesc')}</p>
-                  </div>
+                  </button>
 
                   {/* Investments tier (coming soon) */}
                   <div className={`p-4 rounded-xl ${user?.plan === 'FULL' ? 'border-2 border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border border-surface-200 dark:border-surface-600 opacity-60'}`}>

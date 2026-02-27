@@ -14,7 +14,7 @@ import { formatCurrency, formatMonthYear, getCurrentMonth } from '../utils/forma
 import { currencyFormatter } from '../utils/chartHelpers';
 import { getAverage, getVariationPercent, getTrend, getWeightedMovingAverage } from '../utils/calculations';
 
-const LINE_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b'];
+const LINE_COLORS = ['#10b981', '#14b8a6', '#ec4899', '#f59e0b'];
 
 interface HistoryEntry {
   id: string;
@@ -265,7 +265,7 @@ function ExpenseDetailChart({ expense }: { expense: GroupedExpense }) {
           <XAxis dataKey="month" tick={{ fill: '#94a3b8', fontSize: 12 }} />
           <YAxis tick={{ fill: '#94a3b8' }} />
           <Tooltip formatter={currencyFormatter} />
-          <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
+          <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
           <Line type="monotone" dataKey="average" stroke="#94a3b8" strokeDasharray="5 5" strokeWidth={1} dot={false} />
           {expense.goal && <Line type="monotone" dataKey="limit" stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} dot={false} />}
           <Legend />

@@ -13,7 +13,7 @@ import { formatCurrency, formatMonthYear, getMonthFromDate, getCurrentMonth } fr
 import { translateCategoryName } from '../utils/categoryTranslation';
 import { currencyFormatter } from '../utils/chartHelpers';
 
-const CHART_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#ef4444', '#6366f1', '#84cc16', '#f97316'];
+const CHART_COLORS = ['#10b981', '#14b8a6', '#ec4899', '#f59e0b', '#06b6d4', '#3b82f6', '#ef4444', '#6366f1', '#84cc16', '#f97316'];
 
 export default function Dashboard() {
   const { t } = useTranslation();

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const createExpenseSchema = z.object({
   description: z.string().min(1).max(200),
-  amount: z.number().positive(),
+  amount: z.number().nonnegative(),
   type: z.enum(['FIXED', 'VARIABLE']),
   currency: z.string().length(3).optional(),
   categoryId: z.string().min(1),

@@ -8,7 +8,8 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { useFinanceStore } from '../stores/useFinanceStore';
 import { useBankingStore } from '../stores/useBankingStore';
-import { formatCurrency, formatMonthYear, getPreviousMonths } from '../utils/format';
+import { useAuthStore } from '../stores/useAuthStore';
+import { formatCurrency, formatMonthYear, getPreviousMonths, getMonthFromDate, getCurrentMonth } from '../utils/format';
 import { translateCategoryName } from '../utils/categoryTranslation';
 import { currencyFormatter } from '../utils/chartHelpers';
 
@@ -17,14 +18,16 @@ const CHART_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#0
 export default function Dashboard() {
   const { t } = useTranslation();
   const { dashboard, incomes, expenses, fetchAll, isLoading } = useFinanceStore();
-  const { isAvailable: bankingAvailable, accounts, checkAvailability, fetchAccounts } = useBankingStore();
+  const { isAvailable: bankingAvailable, accounts, connections, checkAvailability, fetchAccounts, fetchConnections } = useBankingStore();
+  const user = useAuthStore(s => s.user);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchAll();
     checkAvailability();
     fetchAccounts();
-  }, [fetchAll, checkAvailability, fetchAccounts]);
+    fetchConnections();
+  }, [fetchAll, checkAvailability, fetchAccounts, fetchConnections]);
 
   const pieData = useMemo(() => {
     if (!dashboard) return [];
@@ -34,20 +37,59 @@ export default function Dashboard() {
       .sort((a, b) => b.value - a.value);
   }, [dashboard]);
 
-  const months6 = useMemo(() => getPreviousMonths(6), []);
+  // Determine the start month: earliest bank connection sync or user account creation
+  const chartMonths = useMemo(() => {
+    const current = getCurrentMonth();
+    // Find the earliest relevant date
+    let earliestDate: string | null = null;
+
+    // Check first bank connection sync date
+    for (const conn of connections) {
+      if (conn.lastSyncAt && (!earliestDate || conn.lastSyncAt < earliestDate)) {
+        earliestDate = conn.lastSyncAt;
+      }
+    }
+
+    // Fall back to user account creation date
+    if (!earliestDate && user?.createdAt) {
+      earliestDate = user.createdAt;
+    }
+
+    if (!earliestDate) return [current];
+
+    const startMonth = earliestDate.slice(0, 7); // YYYY-MM
+    // Build months from startMonth to current
+    const start = new Date(startMonth + '-01');
+    const end = new Date(current + '-01');
+    const months: string[] = [];
+    const d = new Date(start);
+    while (d <= end) {
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      d.setMonth(d.getMonth() + 1);
+    }
+    // Cap at 12 months max for readability
+    return months.length > 12 ? months.slice(-12) : months;
+  }, [connections, user]);
 
   const barData = useMemo(() => {
-    return months6.map(month => {
+    return chartMonths.map(month => {
+      // Income: MONTHLY recurrences count if the income was created on or before this month
+      // ONE_TIME / others count only if their date matches this month
       const incomeTotal = incomes.reduce((sum, inc) => {
-        if (inc.recurrence === 'monthly' || inc.date.slice(0, 7) === month) return sum + inc.amount;
+        const incMonth = getMonthFromDate(inc.date);
+        if (inc.recurrence === 'MONTHLY' && incMonth <= month) return sum + inc.amount;
+        if (incMonth === month) return sum + inc.amount;
         return sum;
       }, 0);
 
+      // Fixed expenses: only count if the expense date falls in this month
+      // (recurring fixed expenses generate per-month records via generateRecurring)
       const fixedTotal = expenses
-        .filter(e => e.type === 'FIXED')
+        .filter(e => e.type === 'FIXED' && getMonthFromDate(e.date) === month)
         .reduce((sum, e) => sum + e.amount, 0);
+
       const variableTotal = expenses
-        .filter(e => e.type === 'VARIABLE' && e.date.slice(0, 7) === month)
+        .filter(e => e.type === 'VARIABLE' && getMonthFromDate(e.date) === month)
         .reduce((sum, e) => sum + e.amount, 0);
 
       return {
@@ -57,7 +99,7 @@ export default function Dashboard() {
         [t('dashboard.variable')]: variableTotal,
       };
     });
-  }, [incomes, expenses, months6, t]);
+  }, [incomes, expenses, chartMonths, t]);
 
   if (isLoading || !dashboard) {
     return (

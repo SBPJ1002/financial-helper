@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   PiggyBank, CreditCard, TrendingDown, Shield, Landmark,
   ChevronLeft, ChevronRight, Check, Briefcase, User, Building2,
-  Wallet, Home, Users, Loader2, DollarSign, ArrowRight, Plus,
+  Wallet, Home, Users, Loader2, DollarSign, ArrowRight, Plus, Trash2,
 } from 'lucide-react';
 import { PluggyConnect } from 'react-pluggy-connect';
 import Button from '../components/ui/Button';
@@ -12,10 +12,21 @@ import Card from '../components/ui/Card';
 import { useToast } from '../components/ui/Toast';
 import { useOnboardingStore } from '../stores/useOnboardingStore';
 import { useBankingStore } from '../stores/useBankingStore';
-import { useDeclarationStore, type CreateDeclarationInput } from '../stores/useDeclarationStore';
 import { useFinanceStore } from '../stores/useFinanceStore';
+import ExpenseFormModal from '../components/forms/ExpenseFormModal';
+import IncomeFormModal from '../components/forms/IncomeFormModal';
+import { formatCurrency } from '../utils/format';
 
 const TOTAL_STEPS = 6;
+
+interface OnboardingItem {
+  id: string;
+  description: string;
+  amount: number;
+  currency?: string;
+  dueDay?: number | null;
+  recurrence?: string;
+}
 
 export default function Onboarding() {
   const { t } = useTranslation();
@@ -23,8 +34,7 @@ export default function Onboarding() {
   const { toast } = useToast();
   const { isLoading, isSaving, fetchProfile, updateProfile, completeOnboarding } = useOnboardingStore();
   const { getConnectToken, createConnection, importTransactions, fetchConnections } = useBankingStore();
-  const { bulkCreateDeclarations } = useDeclarationStore();
-  const { categories, fetchCategories, addExpense, generateRecurring } = useFinanceStore();
+  const { categories, incomeCategories, fetchCategories, fetchIncomeCategories, addExpense, addIncome, deleteExpense, deleteIncome, generateRecurring } = useFinanceStore();
 
   const [step, setStep] = useState(0);
   const [initialized, setInitialized] = useState(false);
@@ -46,12 +56,14 @@ export default function Onboarding() {
 
   // Step 4 state
   const [housingType, setHousingType] = useState<string | null>(null);
-  const [expectedFixedExpenses, setExpectedFixedExpenses] = useState<string[]>([]);
   const [hasDependents, setHasDependents] = useState(false);
   const [dependentTypes, setDependentTypes] = useState<string[]>([]);
 
-  // Declaration details per fixed expense (for onboarding)
-  const [expenseDetails, setExpenseDetails] = useState<Record<string, { paymentMethod: string; amount: string }>>({});
+  // Step 4: Expense & Income lists (items created via modals)
+  const [onboardingExpenses, setOnboardingExpenses] = useState<OnboardingItem[]>([]);
+  const [onboardingIncomes, setOnboardingIncomes] = useState<OnboardingItem[]>([]);
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [incomeModalOpen, setIncomeModalOpen] = useState(false);
 
   // Step 5 state
   const [connectToken, setConnectToken] = useState<string | null>(null);
@@ -73,7 +85,6 @@ export default function Onboarding() {
         if (p.incomeRange) setIncomeRange(p.incomeRange);
         if (p.incomeIsVariable) setIncomeIsVariable(p.incomeIsVariable);
         if (p.housingType) setHousingType(p.housingType);
-        if (p.expectedFixedExpenses?.length) setExpectedFixedExpenses(p.expectedFixedExpenses);
         if (p.hasDependents) setHasDependents(p.hasDependents);
         if (p.dependentTypes?.length) setDependentTypes(p.dependentTypes);
         if (p.onboardingStepReached > 0) setStep(p.onboardingStepReached);
@@ -83,6 +94,7 @@ export default function Onboarding() {
     });
     fetchConnections();
     fetchCategories();
+    fetchIncomeCategories();
   }, []);
 
   function getStepData() {
@@ -90,7 +102,7 @@ export default function Onboarding() {
       case 0: return { primaryGoal, financialControlScore: controlScore };
       case 1: return { bankAccountCount, creditCardCount, preferredPaymentMethods: paymentMethods };
       case 2: return { incomeType, expectedIncomeDay, incomeRange, incomeIsVariable };
-      case 3: return { housingType, expectedFixedExpenses, hasDependents, dependentTypes: hasDependents ? dependentTypes : [] };
+      case 3: return { housingType, hasDependents, dependentTypes: hasDependents ? dependentTypes : [] };
       default: return {};
     }
   }
@@ -98,67 +110,6 @@ export default function Onboarding() {
   async function handleNext() {
     if (step < 4) {
       await updateProfile({ ...getStepData(), onboardingStepReached: step + 1 });
-    }
-    // After step 3 (housing/expenses), create declarations for selected fixed expenses
-    if (step === 3 && expectedFixedExpenses.length > 0) {
-      try {
-        const declarations: CreateDeclarationInput[] = expectedFixedExpenses
-          .filter(key => {
-            const detail = expenseDetails[key];
-            return detail && detail.amount && parseFloat(detail.amount) > 0;
-          })
-          .map(key => {
-            const detail = expenseDetails[key];
-            const label = FIXED_EXPENSE_OPTIONS.find(o => o.value === key)?.label || key;
-            return {
-              label,
-              paymentMethod: (detail.paymentMethod || 'PIX') as CreateDeclarationInput['paymentMethod'],
-              estimatedAmount: parseFloat(detail.amount),
-            };
-          });
-        if (declarations.length > 0) {
-          await bulkCreateDeclarations(declarations);
-        }
-
-        // Also create actual Expense records so they appear in the Expenses page
-        const EXPENSE_CATEGORY_MAP: Record<string, string> = {
-          rent_mortgage: 'Moradia', condo: 'Moradia',
-          electricity: 'Serviços', water: 'Serviços',
-          internet: 'Assinaturas', cellphone: 'Assinaturas', streaming: 'Assinaturas',
-          health_insurance: 'Saúde', insurance: 'Seguro',
-          gym: 'Pessoal', alimony: 'Pessoal',
-          education: 'Educação',
-        };
-        const today = new Date().toISOString().slice(0, 10);
-        const dueDay = new Date().getDate();
-        for (const key of expectedFixedExpenses) {
-          const detail = expenseDetails[key];
-          if (!detail?.amount || parseFloat(detail.amount) <= 0) continue;
-          const label = FIXED_EXPENSE_OPTIONS.find(o => o.value === key)?.label || key;
-          const catName = EXPENSE_CATEGORY_MAP[key];
-          const cat = catName ? categories.find(c => c.name === catName) : undefined;
-          if (!cat) continue;
-          try {
-            const expense = await addExpense({
-              description: label,
-              amount: parseFloat(detail.amount),
-              type: 'FIXED',
-              categoryId: cat.id,
-              date: today,
-              dueDay,
-              status: 'PENDING',
-              paymentMethod: detail.paymentMethod || 'PIX',
-            });
-            if (expense?.id) {
-              await generateRecurring(expense.id, 12);
-            }
-          } catch {
-            // Non-critical
-          }
-        }
-      } catch {
-        // Non-critical: declarations can be added later in Settings
-      }
     }
     setStep(s => s + 1);
   }
@@ -186,6 +137,71 @@ export default function Onboarding() {
       toast(t('banking.connectionFailed'));
     }
     setConnecting(false);
+  }
+
+  async function handleAddExpense(data: Record<string, unknown>) {
+    try {
+      const months = data._recurringMonths as number | undefined;
+      delete data._recurringMonths;
+      const expense = await addExpense(data as any);
+      if (months && months > 0 && expense?.id) {
+        await generateRecurring(expense.id, months);
+      }
+      setOnboardingExpenses(prev => [...prev, {
+        id: expense.id,
+        description: data.description as string,
+        amount: data.amount as number,
+        currency: data.currency as string | undefined,
+        dueDay: data.dueDay as number | undefined,
+      }]);
+      setExpenseModalOpen(false);
+      toast(t('expenses.expenseAdded'));
+    } catch {
+      toast(t('expenses.addFailed'));
+    }
+  }
+
+  async function handleAddIncome(data: Record<string, unknown>) {
+    try {
+      await addIncome(data as any);
+      // addIncome doesn't return the id, so use a generated key for display
+      setOnboardingIncomes(prev => [...prev, {
+        id: crypto.randomUUID(),
+        description: data.description as string,
+        amount: data.amount as number,
+        currency: data.currency as string | undefined,
+        recurrence: data.recurrence as string | undefined,
+      }]);
+      setIncomeModalOpen(false);
+      toast(t('expenses.incomeAdded'));
+    } catch {
+      toast(t('expenses.addFailed'));
+    }
+  }
+
+  async function handleDeleteExpenseItem(id: string) {
+    try {
+      await deleteExpense(id);
+      setOnboardingExpenses(prev => prev.filter(e => e.id !== id));
+      toast(t('expenses.itemDeleted'));
+    } catch {
+      toast(t('expenses.deleteFailed'));
+    }
+  }
+
+  async function handleDeleteIncomeItem(item: OnboardingItem) {
+    try {
+      // Find the matching income in the store by description+amount
+      const storeIncomes = useFinanceStore.getState().incomes;
+      const match = storeIncomes.find(i => i.description === item.description && i.amount === item.amount);
+      if (match) {
+        await deleteIncome(match.id);
+      }
+      setOnboardingIncomes(prev => prev.filter(i => i.id !== item.id));
+      toast(t('expenses.itemDeleted'));
+    } catch {
+      toast(t('expenses.deleteFailed'));
+    }
   }
 
   if (isLoading || !initialized) {
@@ -226,21 +242,6 @@ export default function Onboarding() {
     { value: 'DEBIT', label: t('onboarding.payment.debit') },
     { value: 'CASH', label: t('onboarding.payment.cash') },
     { value: 'BOLETO', label: t('onboarding.payment.boleto') },
-  ];
-
-  const FIXED_EXPENSE_OPTIONS = [
-    { value: 'rent_mortgage', label: t('onboarding.fixedExpenses.rentMortgage') },
-    { value: 'condo', label: t('onboarding.fixedExpenses.condo') },
-    { value: 'electricity', label: t('onboarding.fixedExpenses.electricity') },
-    { value: 'water', label: t('onboarding.fixedExpenses.water') },
-    { value: 'internet', label: t('onboarding.fixedExpenses.internet') },
-    { value: 'cellphone', label: t('onboarding.fixedExpenses.cellphone') },
-    { value: 'health_insurance', label: t('onboarding.fixedExpenses.healthInsurance') },
-    { value: 'insurance', label: t('onboarding.fixedExpenses.insurance') },
-    { value: 'gym', label: t('onboarding.fixedExpenses.gym') },
-    { value: 'streaming', label: t('onboarding.fixedExpenses.streaming') },
-    { value: 'education', label: t('onboarding.fixedExpenses.education') },
-    { value: 'alimony', label: t('onboarding.fixedExpenses.alimony') },
   ];
 
   const DEPENDENT_TYPES = [
@@ -497,7 +498,7 @@ export default function Onboarding() {
           </div>
         )}
 
-        {/* Step 3: Housing & Fixed Expenses */}
+        {/* Step 3: Housing, Expenses & Incomes */}
         {step === 3 && (
           <div className="space-y-6 animate-fade-in">
             <div className="text-center">
@@ -505,6 +506,7 @@ export default function Onboarding() {
               <p className="text-sm text-surface-500 mt-2">{t('onboarding.housingExpenses.subtitle')}</p>
             </div>
 
+            {/* Housing type */}
             <div>
               <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-300 mb-3">{t('onboarding.housingExpenses.housingQuestion')}</h3>
               <div className="grid grid-cols-2 gap-2">
@@ -525,69 +527,67 @@ export default function Onboarding() {
               </div>
             </div>
 
+            {/* Fixed Expenses */}
             <div>
-              <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-300 mb-3">{t('onboarding.housingExpenses.fixedExpensesQuestion')}</h3>
-              <div className="flex flex-wrap gap-2">
-                {FIXED_EXPENSE_OPTIONS.map(fe => (
-                  <button
-                    key={fe.value}
-                    onClick={() => setExpectedFixedExpenses(toggleArrayItem(expectedFixedExpenses, fe.value))}
-                    className={`py-1.5 px-3 rounded-full text-sm border transition-all ${
-                      expectedFixedExpenses.includes(fe.value)
-                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 font-medium'
-                        : 'border-surface-200 dark:border-surface-600 text-surface-600 dark:text-surface-400 hover:border-surface-300'
-                    }`}
-                  >
-                    {fe.label}
-                  </button>
+              <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-300 mb-3">{t('expenses.fixedExpenses')}</h3>
+              <div className="space-y-2">
+                {onboardingExpenses.map(item => (
+                  <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-surface-900 dark:text-white truncate">{item.description}</p>
+                      <p className="text-xs text-surface-500">
+                        {formatCurrency(item.amount, item.currency)}
+                        {item.dueDay ? ` - ${t('expenses.day')} ${item.dueDay}` : ''}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteExpenseItem(item.id)}
+                      className="p-1.5 rounded hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-400 hover:text-red-500 ml-2 shrink-0"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 ))}
+                <button
+                  onClick={() => setExpenseModalOpen(true)}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-dashed border-surface-300 dark:border-surface-600 text-sm text-surface-500 hover:text-primary-500 hover:border-primary-400 transition-colors"
+                >
+                  <Plus className="h-4 w-4" /> {t('expenses.addFixedExpense')}
+                </button>
               </div>
-
-              {/* Expandable detail rows for selected expenses */}
-              {expectedFixedExpenses.length > 0 && (
-                <div className="mt-4 space-y-3">
-                  <p className="text-xs text-surface-500">{t('onboarding.housingExpenses.detailHint')}</p>
-                  {expectedFixedExpenses.map(key => {
-                    const fe = FIXED_EXPENSE_OPTIONS.find(o => o.value === key);
-                    if (!fe) return null;
-                    const detail = expenseDetails[key] || { paymentMethod: 'PIX', amount: '' };
-                    return (
-                      <div key={key} className="p-3 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 space-y-2">
-                        <span className="text-sm font-medium text-surface-700 dark:text-surface-300">{fe.label}</span>
-                        <div className="flex items-center gap-3">
-                          <div className="flex gap-1.5 flex-1">
-                            {(['PIX', 'BOLETO', 'AUTO_DEBIT', 'CREDIT_CARD'] as const).map(pm => (
-                              <button
-                                key={pm}
-                                type="button"
-                                onClick={() => setExpenseDetails(prev => ({ ...prev, [key]: { ...detail, paymentMethod: pm } }))}
-                                className={`px-2.5 py-1 rounded text-xs border transition-all ${
-                                  detail.paymentMethod === pm
-                                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 font-medium'
-                                    : 'border-surface-200 dark:border-surface-600 text-surface-500'
-                                }`}
-                              >
-                                {pm === 'CREDIT_CARD' ? t('onboarding.payment.credit') : pm === 'AUTO_DEBIT' ? 'Auto' : pm === 'BOLETO' ? 'Boleto' : 'PIX'}
-                              </button>
-                            ))}
-                          </div>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder={t('onboarding.housingExpenses.amountPlaceholder')}
-                            value={detail.amount}
-                            onChange={e => setExpenseDetails(prev => ({ ...prev, [key]: { ...detail, amount: e.target.value } }))}
-                            className="w-32 px-2.5 py-1.5 rounded border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-sm text-surface-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary-500"
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
 
+            {/* Incomes */}
+            <div>
+              <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-300 mb-3">{t('expenses.income')}</h3>
+              <div className="space-y-2">
+                {onboardingIncomes.map(item => (
+                  <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-surface-900 dark:text-white truncate">{item.description}</p>
+                      <p className="text-xs text-surface-500">
+                        {formatCurrency(item.amount, item.currency)}
+                        {item.recurrence === 'MONTHLY' ? ` - ${t('expenses.monthly')}` : ''}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteIncomeItem(item)}
+                      className="p-1.5 rounded hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-400 hover:text-red-500 ml-2 shrink-0"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => setIncomeModalOpen(true)}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-dashed border-surface-300 dark:border-surface-600 text-sm text-surface-500 hover:text-primary-500 hover:border-primary-400 transition-colors"
+                >
+                  <Plus className="h-4 w-4" /> {t('expenses.addIncome')}
+                </button>
+              </div>
+            </div>
+
+            {/* Dependents */}
             <div>
               <div className="flex items-center justify-between p-3 rounded-lg border border-surface-200 dark:border-surface-600">
                 <span className="text-sm text-surface-700 dark:text-surface-300">{t('onboarding.housingExpenses.hasDependents')}</span>
@@ -734,11 +734,19 @@ export default function Onboarding() {
                     </span>
                   </div>
                 )}
-                {expectedFixedExpenses.length > 0 && (
+                {onboardingExpenses.length > 0 && (
                   <div className="flex justify-between items-start py-2 border-b border-surface-100 dark:border-surface-700">
-                    <span className="text-sm text-surface-500">{t('onboarding.review.fixedExpenses')}</span>
+                    <span className="text-sm text-surface-500">{t('expenses.fixedExpenses')}</span>
                     <span className="text-sm font-medium text-surface-900 dark:text-white text-right max-w-[60%]">
-                      {expectedFixedExpenses.map(e => FIXED_EXPENSE_OPTIONS.find(f => f.value === e)?.label).filter(Boolean).join(', ')}
+                      {onboardingExpenses.map(e => e.description).join(', ')}
+                    </span>
+                  </div>
+                )}
+                {onboardingIncomes.length > 0 && (
+                  <div className="flex justify-between items-start py-2 border-b border-surface-100 dark:border-surface-700">
+                    <span className="text-sm text-surface-500">{t('expenses.income')}</span>
+                    <span className="text-sm font-medium text-surface-900 dark:text-white text-right max-w-[60%]">
+                      {onboardingIncomes.map(i => i.description).join(', ')}
                     </span>
                   </div>
                 )}
@@ -784,6 +792,25 @@ export default function Onboarding() {
           )}
         </div>
       </div>
+
+      {/* Expense Form Modal */}
+      <ExpenseFormModal
+        open={expenseModalOpen}
+        onClose={() => setExpenseModalOpen(false)}
+        editing={null}
+        type="FIXED"
+        categories={categories}
+        onSave={handleAddExpense}
+      />
+
+      {/* Income Form Modal */}
+      <IncomeFormModal
+        open={incomeModalOpen}
+        onClose={() => setIncomeModalOpen(false)}
+        editing={null}
+        categories={incomeCategories}
+        onSave={handleAddIncome}
+      />
     </div>
   );
 }

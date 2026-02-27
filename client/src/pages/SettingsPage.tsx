@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Settings, Moon, Sun, Monitor, Info, Trash2, User, Palette,
   Bot, Bell, Database, Wallet, Loader2, Crown, Sparkles, Lock,
-  ClipboardCheck,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -19,7 +18,6 @@ import api from '../services/api';
 import { useAuthStore } from '../stores/useAuthStore';
 import { CURRENCIES } from '../i18n';
 import { getIntlLocale } from '../i18n';
-import DeclarationList from '../components/declarations/DeclarationList';
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -50,16 +48,19 @@ export default function SettingsPage() {
     await updateSettings({ dateFormat } as any);
   }
 
+  const isFreePlan = !user?.plan || user.plan === 'FREE';
+
   const sections = [
     { id: 'profile', label: t('settings.profileAndFinancial'), icon: User },
     { id: 'appearance', label: t('settings.appearance'), icon: Palette },
     { id: 'currency', label: t('settings.currencySection'), icon: Wallet },
-    { id: 'ai', label: t('settings.ai'), icon: Bot },
+    ...(!isFreePlan ? [{ id: 'ai', label: t('settings.ai'), icon: Bot }] : []),
     { id: 'notifications', label: t('settings.notifications'), icon: Bell },
-    { id: 'declarations', label: t('settings.declarations'), icon: ClipboardCheck },
     { id: 'data', label: t('settings.data'), icon: Database },
     { id: 'about', label: t('settings.about'), icon: Info },
   ];
+
+  const effectiveSection = (activeSection === 'ai' && isFreePlan) ? 'profile' : activeSection;
 
   return (
     <div className="animate-fade-in">
@@ -73,7 +74,7 @@ export default function SettingsPage() {
           {sections.map(s => (
             <button key={s.id} onClick={() => setActiveSection(s.id)}
               className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors
-                ${activeSection === s.id
+                ${effectiveSection === s.id
                   ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
                   : 'text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700/50'}`}>
               <s.icon className="h-4 w-4 shrink-0" />
@@ -85,7 +86,7 @@ export default function SettingsPage() {
         {/* Content */}
         <div className="flex-1 max-w-2xl space-y-6">
           {/* Profile + Financial Profile (merged) */}
-          {activeSection === 'profile' && (
+          {effectiveSection === 'profile' && (
             <>
               <Card>
                 <h2 className="text-lg font-semibold mb-4">{t('settings.profile')}</h2>
@@ -144,7 +145,7 @@ export default function SettingsPage() {
           )}
 
           {/* Appearance */}
-          {activeSection === 'appearance' && (
+          {effectiveSection === 'appearance' && (
             <Card>
               <h2 className="text-lg font-semibold mb-4">{t('settings.theme')}</h2>
               <div className="grid grid-cols-3 gap-3">
@@ -165,7 +166,7 @@ export default function SettingsPage() {
           )}
 
           {/* Currency & Date Format */}
-          {activeSection === 'currency' && (
+          {effectiveSection === 'currency' && (
             <>
               <Card>
                 <h2 className="text-lg font-semibold mb-4">{t('settings.defaultCurrency')}</h2>
@@ -195,7 +196,7 @@ export default function SettingsPage() {
           )}
 
           {/* AI Assistant */}
-          {activeSection === 'ai' && (
+          {effectiveSection === 'ai' && (
             <>
               <Card>
                 <h2 className="text-lg font-semibold mb-4">{t('settings.aiContext')}</h2>
@@ -223,7 +224,7 @@ export default function SettingsPage() {
           )}
 
           {/* Notifications */}
-          {activeSection === 'notifications' && (
+          {effectiveSection === 'notifications' && (
             <Card>
               <h2 className="text-lg font-semibold mb-4">{t('settings.alerts')}</h2>
               <div className="space-y-3">
@@ -240,11 +241,8 @@ export default function SettingsPage() {
             </Card>
           )}
 
-          {/* Declarations */}
-          {activeSection === 'declarations' && <DeclarationList />}
-
           {/* Data & Privacy */}
-          {activeSection === 'data' && (
+          {effectiveSection === 'data' && (
             <Card>
               <h2 className="text-lg font-semibold mb-4">{t('settings.dataPrivacy')}</h2>
               <div className="space-y-4">
@@ -285,7 +283,7 @@ export default function SettingsPage() {
           )}
 
           {/* About */}
-          {activeSection === 'about' && (
+          {effectiveSection === 'about' && (
             <Card>
               <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><Info className="h-5 w-5" /> {t('settings.aboutTitle')}</h2>
               <div className="text-sm text-surface-500 space-y-1">

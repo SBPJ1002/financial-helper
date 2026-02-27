@@ -2,18 +2,18 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
-  Target, PiggyBank, CreditCard, TrendingDown, Shield, Landmark,
+  PiggyBank, CreditCard, TrendingDown, Shield, Landmark,
   ChevronLeft, ChevronRight, Check, Briefcase, User, Building2,
   Wallet, Home, Users, Loader2, DollarSign, ArrowRight, Plus,
 } from 'lucide-react';
 import { PluggyConnect } from 'react-pluggy-connect';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
-import Input from '../components/ui/Input';
 import { useToast } from '../components/ui/Toast';
 import { useOnboardingStore } from '../stores/useOnboardingStore';
 import { useBankingStore } from '../stores/useBankingStore';
 import { useDeclarationStore, type CreateDeclarationInput } from '../stores/useDeclarationStore';
+import { useFinanceStore } from '../stores/useFinanceStore';
 
 const TOTAL_STEPS = 6;
 
@@ -21,9 +21,10 @@ export default function Onboarding() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { profile, isLoading, isSaving, fetchProfile, updateProfile, completeOnboarding } = useOnboardingStore();
-  const { getConnectToken, createConnection, importTransactions, fetchConnections, connections } = useBankingStore();
+  const { isLoading, isSaving, fetchProfile, updateProfile, completeOnboarding } = useOnboardingStore();
+  const { getConnectToken, createConnection, importTransactions, fetchConnections } = useBankingStore();
   const { bulkCreateDeclarations } = useDeclarationStore();
+  const { categories, fetchCategories, addExpense, generateRecurring } = useFinanceStore();
 
   const [step, setStep] = useState(0);
   const [initialized, setInitialized] = useState(false);
@@ -77,9 +78,11 @@ export default function Onboarding() {
         if (p.dependentTypes?.length) setDependentTypes(p.dependentTypes);
         if (p.onboardingStepReached > 0) setStep(p.onboardingStepReached);
       }
+    }).finally(() => {
       setInitialized(true);
     });
     fetchConnections();
+    fetchCategories();
   }, []);
 
   function getStepData() {
@@ -115,6 +118,43 @@ export default function Onboarding() {
           });
         if (declarations.length > 0) {
           await bulkCreateDeclarations(declarations);
+        }
+
+        // Also create actual Expense records so they appear in the Expenses page
+        const EXPENSE_CATEGORY_MAP: Record<string, string> = {
+          rent_mortgage: 'Moradia', condo: 'Moradia',
+          electricity: 'Serviços', water: 'Serviços',
+          internet: 'Assinaturas', cellphone: 'Assinaturas', streaming: 'Assinaturas',
+          health_insurance: 'Saúde', insurance: 'Seguro',
+          gym: 'Pessoal', alimony: 'Pessoal',
+          education: 'Educação',
+        };
+        const today = new Date().toISOString().slice(0, 10);
+        const dueDay = new Date().getDate();
+        for (const key of expectedFixedExpenses) {
+          const detail = expenseDetails[key];
+          if (!detail?.amount || parseFloat(detail.amount) <= 0) continue;
+          const label = FIXED_EXPENSE_OPTIONS.find(o => o.value === key)?.label || key;
+          const catName = EXPENSE_CATEGORY_MAP[key];
+          const cat = catName ? categories.find(c => c.name === catName) : undefined;
+          if (!cat) continue;
+          try {
+            const expense = await addExpense({
+              description: label,
+              amount: parseFloat(detail.amount),
+              type: 'FIXED',
+              categoryId: cat.id,
+              date: today,
+              dueDay,
+              status: 'PENDING',
+              paymentMethod: detail.paymentMethod || 'PIX',
+            });
+            if (expense?.id) {
+              await generateRecurring(expense.id, 12);
+            }
+          } catch {
+            // Non-critical
+          }
         }
       } catch {
         // Non-critical: declarations can be added later in Settings
@@ -408,12 +448,12 @@ export default function Onboarding() {
             {(incomeType === 'CLT' || incomeType === 'RETIREMENT') && (
               <div>
                 <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-300 mb-3">{t('onboarding.incomeWork.incomeDay')}</h3>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
                     <button
                       key={day}
                       onClick={() => setExpectedIncomeDay(expectedIncomeDay === day ? null : day)}
-                      className={`w-9 h-9 rounded-lg text-xs font-medium border transition-all ${
+                      className={`w-10 h-10 rounded-lg text-sm font-medium border transition-all ${
                         expectedIncomeDay === day
                           ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600'
                           : 'border-surface-200 dark:border-surface-600 text-surface-600 dark:text-surface-400 hover:border-surface-300'
@@ -428,12 +468,12 @@ export default function Onboarding() {
 
             <div>
               <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-300 mb-3">{t('onboarding.incomeWork.rangeQuestion')}</h3>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {INCOME_RANGES.map(r => (
                   <button
                     key={r.value}
                     onClick={() => setIncomeRange(r.value)}
-                    className={`w-full py-2 px-4 rounded-lg text-sm font-medium border text-left transition-all ${
+                    className={`w-full py-2.5 px-4 rounded-lg text-sm font-medium border text-left transition-all ${
                       incomeRange === r.value
                         ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600'
                         : 'border-surface-200 dark:border-surface-600 text-surface-600 dark:text-surface-400 hover:border-surface-300'
@@ -505,40 +545,42 @@ export default function Onboarding() {
 
               {/* Expandable detail rows for selected expenses */}
               {expectedFixedExpenses.length > 0 && (
-                <div className="mt-4 space-y-2">
+                <div className="mt-4 space-y-3">
                   <p className="text-xs text-surface-500">{t('onboarding.housingExpenses.detailHint')}</p>
                   {expectedFixedExpenses.map(key => {
                     const fe = FIXED_EXPENSE_OPTIONS.find(o => o.value === key);
                     if (!fe) return null;
                     const detail = expenseDetails[key] || { paymentMethod: 'PIX', amount: '' };
                     return (
-                      <div key={key} className="flex items-center gap-2 p-2 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800">
-                        <span className="text-sm font-medium text-surface-700 dark:text-surface-300 min-w-[100px] truncate">{fe.label}</span>
-                        <div className="flex gap-1">
-                          {(['PIX', 'BOLETO', 'AUTO_DEBIT', 'CREDIT_CARD'] as const).map(pm => (
-                            <button
-                              key={pm}
-                              type="button"
-                              onClick={() => setExpenseDetails(prev => ({ ...prev, [key]: { ...detail, paymentMethod: pm } }))}
-                              className={`px-2 py-0.5 rounded text-xs border transition-all ${
-                                detail.paymentMethod === pm
-                                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 font-medium'
-                                  : 'border-surface-200 dark:border-surface-600 text-surface-500'
-                              }`}
-                            >
-                              {pm === 'CREDIT_CARD' ? t('onboarding.payment.credit') : pm === 'AUTO_DEBIT' ? 'Auto' : pm === 'BOLETO' ? 'Boleto' : 'PIX'}
-                            </button>
-                          ))}
+                      <div key={key} className="p-3 rounded-lg border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 space-y-2">
+                        <span className="text-sm font-medium text-surface-700 dark:text-surface-300">{fe.label}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="flex gap-1.5 flex-1">
+                            {(['PIX', 'BOLETO', 'AUTO_DEBIT', 'CREDIT_CARD'] as const).map(pm => (
+                              <button
+                                key={pm}
+                                type="button"
+                                onClick={() => setExpenseDetails(prev => ({ ...prev, [key]: { ...detail, paymentMethod: pm } }))}
+                                className={`px-2.5 py-1 rounded text-xs border transition-all ${
+                                  detail.paymentMethod === pm
+                                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 font-medium'
+                                    : 'border-surface-200 dark:border-surface-600 text-surface-500'
+                                }`}
+                              >
+                                {pm === 'CREDIT_CARD' ? t('onboarding.payment.credit') : pm === 'AUTO_DEBIT' ? 'Auto' : pm === 'BOLETO' ? 'Boleto' : 'PIX'}
+                              </button>
+                            ))}
+                          </div>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder={t('onboarding.housingExpenses.amountPlaceholder')}
+                            value={detail.amount}
+                            onChange={e => setExpenseDetails(prev => ({ ...prev, [key]: { ...detail, amount: e.target.value } }))}
+                            className="w-32 px-2.5 py-1.5 rounded border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-sm text-surface-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          />
                         </div>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder={t('onboarding.housingExpenses.amountPlaceholder')}
-                          value={detail.amount}
-                          onChange={e => setExpenseDetails(prev => ({ ...prev, [key]: { ...detail, amount: e.target.value } }))}
-                          className="w-24 px-2 py-1 rounded border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-700 text-sm text-surface-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary-500"
-                        />
                       </div>
                     );
                   })}

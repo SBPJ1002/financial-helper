@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Search, Download, DollarSign, ArrowUpCircle, ArrowDownCircle, Trash2, Edit2, ChevronLeft, ChevronRight, ArrowLeftRight, Settings, Check, X, RefreshCw } from 'lucide-react';
+import { Plus, Search, Download, DollarSign, ArrowUpCircle, ArrowDownCircle, Trash2, Edit2, ChevronLeft, ChevronRight, ArrowLeftRight, Settings, Check, X, RefreshCw, ClipboardCheck } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -15,6 +15,7 @@ import { useUserSettingsStore } from '../stores/useUserSettingsStore';
 import { formatCurrency, formatDate, getCurrentMonth, getMonthFromDate, formatMonthYearLong, navigateMonth } from '../utils/format';
 import { translateCategoryName } from '../utils/categoryTranslation';
 import { CURRENCIES } from '../i18n';
+import DeclarationList from '../components/declarations/DeclarationList';
 
 type Tab = 'income' | 'fixed' | 'variable';
 
@@ -81,6 +82,7 @@ export default function Expenses() {
   const [editingIncome, setEditingIncome] = useState<IncomeRow | null>(null);
   const [editingExpense, setEditingExpense] = useState<ExpenseRow | null>(null);
   const [categoryManagerModal, setCategoryManagerModal] = useState(false);
+  const [declarationsModal, setDeclarationsModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: Tab; id: string } | null>(null);
   const [pendingUpdate, setPendingUpdate] = useState<{ id: string; data: Record<string, unknown>; months?: number } | null>(null);
 
@@ -259,6 +261,9 @@ export default function Expenses() {
             <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
             {isSyncing ? t('expenses.syncing') : t('expenses.syncOpenFinance')}
           </Button>
+          <Button variant="secondary" size="sm" onClick={() => setDeclarationsModal(true)}>
+            <ClipboardCheck className="h-4 w-4" /> {t('settings.declarations')}
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => setCategoryManagerModal(true)}>
             <Settings className="h-4 w-4" /> {t('expenses.manageCategories')}
           </Button>
@@ -392,6 +397,11 @@ export default function Expenses() {
           }
           setExpenseModal(false);
         }} />
+
+      {/* Declarations Modal */}
+      <Modal open={declarationsModal} onClose={() => setDeclarationsModal(false)} title={t('settings.declarations')} maxWidth="max-w-2xl">
+        <DeclarationList />
+      </Modal>
 
       {/* Category Manager Modal */}
       <CategoryManagerModal

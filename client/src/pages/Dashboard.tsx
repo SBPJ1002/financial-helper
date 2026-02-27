@@ -9,7 +9,7 @@ import Button from '../components/ui/Button';
 import { useFinanceStore } from '../stores/useFinanceStore';
 import { useBankingStore } from '../stores/useBankingStore';
 import { useAuthStore } from '../stores/useAuthStore';
-import { formatCurrency, formatMonthYear, getPreviousMonths, getMonthFromDate, getCurrentMonth } from '../utils/format';
+import { formatCurrency, formatMonthYear, getMonthFromDate, getCurrentMonth } from '../utils/format';
 import { translateCategoryName } from '../utils/categoryTranslation';
 import { currencyFormatter } from '../utils/chartHelpers';
 

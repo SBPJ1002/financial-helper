@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Plus, Search, Download, DollarSign, ArrowUpCircle, ArrowDownCircle, Trash2, Edit2, ChevronLeft, ChevronRight, ArrowLeftRight, Settings, Check, X, RefreshCw } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';

@@ -10,6 +10,11 @@ import routes from './routes/index.js';
 
 const app = express();
 
+// Trust first proxy (Render, Railway, etc.)
+if (env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Security
 app.use(
   helmet({
